@@ -10,7 +10,7 @@ This is the GitHub repository for all scripts pertaining to Purdue Orbital's *Ha
 
 ### 1. Connecting to the Raspberry Pi ###
 
-Currently, our only flight computer is the RPi Model 3 B+, with the name `AvionicsPi`. It can be connected to through either SSH (Secure Shell) ~~or X11 forwarding (Remote Desktop Protocol)~~. The Pi broadcasts its own network, called `AvionicsPiAP`, and is used as an access point to SSH into. Users must first power on the Pi (it may take up to a minute to fully boot up). Once the Pi is booted, users should notice a new network available to connect to with the name `AvionicsPiAP`. Connect to it using the password `PurdueOrbital`. You will now be on a local network containing the Pi and your computer. Internet will not be available on either computer. **Note: Currently, Ethernet passthrough is not enabled, but is being worked on.
+Currently, our only flight computer is the RPi Model 3 B+, with the name `AvionicsPi`. It can be connected to through SSH (Secure Shell) ~~or X11 forwarding (Remote Desktop Protocol)~~. The Pi broadcasts its own network, called `AvionicsPiAP`, and is used as an access point to SSH into. Users must first power on the Pi (it may take up to a minute to fully boot up). Once the Pi is booted, users should notice a new network available to connect to with the name `AvionicsPiAP`. Connect to it using the password `PurdueOrbital`. You will now be on a local network containing the Pi and your computer. Internet will not be available on either computer. **Note: Currently, Ethernet passthrough is not enabled, but is being worked on.
 
 To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Windows users can also use the command prompt.
 
@@ -27,7 +27,7 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
                         
    `PurdueOrbital`
 
-   You are now connected to the Pi via SSH. If connection fails, see **Troubleshooting**.
+   You are now connected to the Pi via SSH. You may also be able to type `ssh pi@192.168.5.1` into the command prompt and proceed as follows, but I'm not 100% on that. If connection fails, see **Troubleshooting**.
 
 *  **MacOS Users:** {Not yet determined}
 
