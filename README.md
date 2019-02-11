@@ -32,9 +32,9 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
 *  **MacOS Users:** {Not yet determined}
 
 
-##Troubleshooting##
+## Troubleshooting ##
 
-*  ###Unable to connect to the Pi (can't reach server)###
+*  ### Unable to connect to the Pi (can't reach server) ###
 
    Check that your computer has properly established connection to the network. On Windows, open the command prompt. Enter `ipconfig`, and under the section labelled `Wireless LAN adapter Wi-Fi` verify that `IPv4 Address` is of the 
    form `192.168.5.XXX`, where `XXX` is any number from 2 to 99 or 200 to 254. If it isn't, your computer hasn't properly acquired a new local IP. In this case, either reboot your machine or type the following commands:
@@ -48,6 +48,6 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
    This will refresh your connection settings without requiring a system reboot. Renewing may take a minute or two, so don't be alarmed if it appears to be stall on `Windows IP Configuration`. Afterwards, verify that your IP is now 
    correctly configured by repeating the steps above.
 
-###Please report any further problems to appropriate person(s).###
+### Please report any further problems to appropriate person(s). ###
 
 </span>
