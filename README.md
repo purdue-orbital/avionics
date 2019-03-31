@@ -62,4 +62,5 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
    [How to set up Pi access to PAL3.0 (or other relevant commercial Wifi)](https://imgur.com/euypelW)
    
    [How to set up Pi as an access point with an Ethernet bridge](https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md)
+   *  [How to correct hostapd.service masked error](https://github.com/raspberrypi/documentation/issues/1018#issuecomment-471335938)
 </span>
