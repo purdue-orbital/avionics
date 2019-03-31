@@ -43,7 +43,7 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
 *  ### Unable to connect to the Pi (can't reach server) ###
 
    Check that your computer has properly established connection to the network. On Windows, open the command prompt. Enter `ipconfig`, and under the section labelled `Wireless LAN adapter Wi-Fi` verify that `IPv4 Address` is of the 
-   form `192.168.5.XXX`, where `XXX` is any number from 2 to 254. If it isn't, your computer hasn't properly acquired a new local IP. In this case, either reboot your machine or type the following commands:
+   form `192.168.4.XXX`, where `XXX` is any number from 2 to 20. If it isn't, your computer hasn't properly acquired a new local IP. In this case, either reboot your machine or type the following commands:
 
    `ipconfig /release`
 
@@ -58,7 +58,6 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
 
 
 ## Setting Up a New Pi ##
-   
    ### Resources ###
    [How to set up Pi access to PAL3.0 (or other relevant commercial Wifi)](https://imgur.com/euypelW)
    
