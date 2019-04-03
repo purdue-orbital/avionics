@@ -1,6 +1,7 @@
 import serial
 import json
 import time
+from RadioModule import Module
 
 class SerialPort():
     """
@@ -41,6 +42,7 @@ class SerialPort():
             }
         }
         self.ser = serial.Serial(self.port, 115200)   # -, baud rate (from Arduino)
+        self.radio = Module.get_instance(self)  # Initialize radio communication
         print("Initialization complete.")
 
     def writeDict(self):
@@ -73,7 +75,7 @@ class SerialPort():
         Overwrites dict with sensor data and sends over radio
         """
         self.writeDict()
-        # print(self.json)
+        self.radio.send(json.dumps(self.json))  # Send json over radio
 
 if __name__ == "__main__":
     # Create new serial port for sensor arduino with name and USB port path
@@ -84,7 +86,7 @@ if __name__ == "__main__":
         while True: # Iterates infinitely, sending JSON objects over radio
             ino.JSONpass()
 
-    except OSError:
+    except OSError:     # Raised when Arduino isn't connected
         print("No such file or directory {}.\n".format(port))
     except KeyboardInterrupt:
         print("Program closed by user.\n")
