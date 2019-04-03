@@ -6,6 +6,7 @@ import RPi.GPIO as GPIO
 import time
 from array import *
 import os
+import queue
 
 class Control:
 
@@ -25,6 +26,8 @@ class Control:
         self.balloon = None
         self.rocket = None
         
+        self.commands = queue.Queue(maxsize = 10)
+        
         
     def QDMCheck(QDM):
         '''
@@ -41,11 +44,12 @@ class Control:
             GPIO.output(self.qdmpin,True)
         else:
             GPIO.output(self.qdmpin,False)
+            self.radio.send(json.dumps({"QDM":"Activated"}))
         
         return 0
 
 
-    def Ignition(datain,mode,datarange):
+    def Ignition(mode):
         '''
         This checks condition and starts ignition
         Parameters: - mode: test mode or pre-launch mode
@@ -60,27 +64,28 @@ class Control:
         
         
         
-        if datarange:
-            Launch = LaunchCondition()
-            if Launch:
-                if (mode == 1):
-                    #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
-                    GPIO.output(self.ignitionpin,True)
-                    time.sleep(3)
-                    #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-                    GPIO.output(self.ignitionpin,False)
-                elif (mode == 2):
-                    #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
-                    GPIO.output(self.ignitionpin,True)
-                    time.sleep(10)
-                    #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-                    GPIO.output(self.ignitionpin,False)
+        Launch = self.LaunchCondition()
+        if Launch:
+            if (mode == 1):
+                #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
+                GPIO.output(self.ignitionpin,True)
+                self.radio.send(json.dumps({"Ignition":"Activated"}))
+                time.sleep(0.1)
+                #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
+                GPIO.output(self.ignitionpin,False)
+            elif (mode == 2):
+                #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
+                GPIO.output(self.ignitionpin,True)
+               self.radio.send(json.dumps({"Ignition":"Activated"}))
+                time.sleep(10)
+                #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
+                GPIO.output(self.ignitionpin,False)
                 
 
         return 0
 
 
-    def Readdata:
+    def readdata(rocket,balloon):
 
         '''
         This reads the data from sensors and check whether they are within range of 5%
@@ -144,11 +149,9 @@ class Control:
             rangecheck = abs(self.rocket[i]-self.balloon[i]) / self.rocket[i]
             
             if (rangecheck > self.error):
-    #            print('data off range')
                 result = False
                 break
             else:
-    #            print('data within range')
                 result = True
         
         return result
@@ -168,39 +171,26 @@ class Control:
         spinrate = (self.balloon[3]<=5) & (self.balloon[4]<=5) & (self.balloon[5]<=5)
         degree = atan(self.balloon[7]/self.balloon[6]) * 180/pi
         direction = (degree <= 100) & (degree >= 80)
-        
-        
-        result = False
-        
-        
-        if (altitude == False):
-            result = False
-        elif (spinrate == False):
-            result = False
-        elif (direction == False):
-            result = False
-        else:
-            result = True
             
-        return result
+        return (altitude & spinrate & direction)
 
 
 
     def ConnectionCheck():
 
         connected = os.path.isfile('./receive/[groundstation].json')
-        if (connected):
-            print('connection true')
-            return 1
-        else:
-            print('connection false')
-            return 0
             
-        return False
+        return connected
 
+    def receivedata():
+        self.commands.put(json.loads(self.radio.receive()))
+        if not self.commands.empty():
+            return self.commands.get()
 
 
 if __name__ == "__main__":
+    
+    ctrl = Control(5,6,0.05)
 
     result = ConnectionCheck()
     endT = datetime.now() + timedelta(seconds = 10)
@@ -209,23 +199,20 @@ if __name__ == "__main__":
     if (result == 0):
         QDMCheck(0)
     else:
-        
-        ctrl = control(5,6,0.05)
-
-        
-        with open('./receive/[groundstation].json') as gsin:
-            GSDATA = json.load(gsin)
+        while not ctrl.commands.empty():
+            GSDATA = ctrl.receivedata()
     
-        QDM = GSDATA['QDM']
-        IGNITION = GSDATA['Ignition']
-        #    CDM = GSDATA['CDM']
-        #    STAB = GSDATA['Stabilization']
-        #    CRASH = GSDATA['Crash']
-        #    DROGUE = GSDATA['Drogue']
-        #    MAIN_CHUTE = GSDATA['Main_Chute']
+            QDM = GSDATA['QDM']
+            IGNITION = GSDATA['Ignition']
+            #    CDM = GSDATA['CDM']
+            #    STAB = GSDATA['Stabilization']
+            #    CRASH = GSDATA['Crash']
+            #    DROGUE = GSDATA['Drogue']
+            #    MAIN_CHUTE = GSDATA['Main_Chute']
 
-        QDMCheck(QDM)
+            ctrl.QDMCheck(QDM)
 
+        ## NEED CHANGES ###
         with open('./send/rocket.json') as R:
             rocket = json.load(R)
         with open('./send/balloon.json') as B:
@@ -235,5 +222,5 @@ if __name__ == "__main__":
         
         condition = ctrl.dataerrorcheck()
         mode = 1
-        if ((condition == True) & (IGNITION == 1)):
-            Ignition(balloon,mode,condition)
+        if (condition & Ignition):
+            Ignition(mode)
