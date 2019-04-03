@@ -13,8 +13,8 @@ class SerialPort():
         Initializes the Port object
 
         Args:
-            Name: String ID for serial port 
-            Port: USB connection for Arduino in '/dev/tty*'
+            name: String ID for serial port 
+            port: USB connection for Arduino in '/dev/tty*'
         """
         print("\nInitializing {} on port {}...".format(name, port))
         self.name = name
