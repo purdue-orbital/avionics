@@ -9,7 +9,7 @@ from digi.xbee.devices import XBeeDevice, XBee64BitAddress, RemoteXBeeDevice, XB
 # - For windows, it will be 'COM#'
 #
 # where # is the port number.
-LOCAL_PORT = "/dev/ttyS7"
+LOCAL_PORT = "COM7"
 
 # Baud rate of the local device
 BAUD_RATE = 9600

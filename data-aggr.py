@@ -13,8 +13,8 @@ class SerialPort():
         Initializes the Port object
 
         Args:
-            Name: String ID for serial port 
-            Port: USB connection for Arduino in '/dev/tty*'
+            name: String ID for serial port 
+            port: USB connection for Arduino in '/dev/tty*'
         """
         print("\nInitializing {} on port {}...".format(name, port))
         self.name = name
@@ -42,7 +42,10 @@ class SerialPort():
             }
         }
         self.ser = serial.Serial(self.port, 115200)   # -, baud rate (from Arduino)
-        self.radio = Module.get_instance(self)  # Initialize radio communication
+        try:
+            self.radio = Module.get_instance(self)  # Initialize radio communication
+        except Exception as e:
+            print(e)
         print("Initialization complete.")
 
     def writeDict(self):
@@ -75,13 +78,33 @@ class SerialPort():
         Overwrites dict with sensor data and sends over radio
         """
         self.writeDict()
-        self.radio.send(json.dumps(self.json))  # Send json over radio
+        try:
+            self.radio.send(json.dumps(self.json))  # Send json over radio
+        except Exception as e:
+            print(e)
+
+    def speedTest(self, dur):
+        """
+        Tests the speed of data acquisition from Arduino for a given time.
+
+        Args:
+            dur: duration (in seconds) of test
+        """
+        start = time.time()
+        i = 0
+        while time.time() < start + dur:
+            self.writeDict()
+            i = i + 1
+        print("\nPolling rate: {} Hz\n".format(i / dur))
+
 
 if __name__ == "__main__":
     # Create new serial port for sensor arduino with name and USB port path
     try:
         port = "/dev/ttyUSB0"
         ino = SerialPort("SensorModule", port)
+
+        ino.speedTest(10)
 
         while True: # Iterates infinitely, sending JSON objects over radio
             ino.JSONpass()
