@@ -15,6 +15,7 @@ class SerialPort():
         Args:
             name: String ID for serial port 
             port: USB connection for Arduino in '/dev/tty*'
+            manager: A Manager() dict object passed through by config.py
         """
         print("\nInitializing {} on port {}...".format(name, port))
         self.name = name
@@ -73,11 +74,15 @@ class SerialPort():
             self.json["Accelerometer"]["y"] = lst[11]
             self.json["Accelerometer"]["z"] = lst[12]
 
-    def JSONpass(self):
+    def JSONpass(self, manager):
         """
         Overwrites dict with sensor data and sends over radio
+
+        Args:
+            manager: A Manager() dict object passed through by config.py
         """
         self.writeDict()
+        manager = self.json    # Add json to Manager() to pass to comm_parse
         try:
             self.radio.send(json.dumps(self.json))  # Send json over radio
         except Exception as e:
@@ -96,20 +101,3 @@ class SerialPort():
             self.writeDict()
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
-
-
-if __name__ == "__main__":
-    # Create new serial port for sensor arduino with name and USB port path
-    try:
-        port = "/dev/ttyUSB0"
-        ino = SerialPort("SensorModule", port)
-
-        ino.speedTest(10)
-
-        while True: # Iterates infinitely, sending JSON objects over radio
-            ino.JSONpass()
-
-    except OSError:     # Raised when Arduino isn't connected
-        print("No such file or directory {}.\n".format(port))
-    except KeyboardInterrupt:
-        print("Program closed by user.\n")
