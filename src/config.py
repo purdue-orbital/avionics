@@ -2,6 +2,7 @@ from multiprocessing import Process, Manager
 from datetime import datetime, timedelta
 from data_aggr import SerialPort
 from comm_parse import Control
+from time import sleep
 
 def dataProc(d):
     """
@@ -16,19 +17,23 @@ def dataProc(d):
         port = "/dev/ttyUSB0"
         ino = SerialPort("SensorModule", port)
 
-        ino.speedTest(10)
+        # ino.speedTest(10)
 
         while True: # Iterates infinitely, sending JSON objects over radio
             ino.JSONpass(d)
 
     except OSError:     # Raised when Arduino isn't connected
         print("No such file or directory {}.\n".format(port))
-    except KeyboardInterrupt:
-        print("Program closed by user.\n")
 
 def commProc(d):
     """
-    Controls all command processes for the balloon flight computer.
+    Controls all command processes for the balloon flight computer. Gets data
+    from dataProc using a DictProxy managed by Manager() in main.
+    """
+    while True:
+        if d[0]:
+            print(d[0])
+            sleep(1)
     """
     print("Running comm_parse.py ...\n")
     ctrl = Control(5,6,0.05)
@@ -63,10 +68,28 @@ def commProc(d):
         mode = 1
         if (condition & IGNITION):
             ctrl.Ignition(mode)
+    """
 
 if __name__ == "__main__":
-    d = Manager().dict()
-    data = Process(target=dataProc, args=(d,))
-    comm = Process(target=commProc, args=(d,))
-    data.start()
-    comm.start()
+    try:
+        # Create Manager() for dict (which is stored in a list)
+        manager = Manager()
+        # Dict stored in lproxy[0] for syncing reasons
+        lproxy = manager.list()
+        lproxy.append({})
+
+        # Assign each function to a Process
+        data = Process(target=dataProc, args=(lproxy,))
+        comm = Process(target=commProc, args=(lproxy,))
+
+        # Start processes
+        data.start()
+        comm.start()
+        # Wait in main so that this can be escaped properly with ctrl+c
+        while True:
+            sleep(10)
+        
+    except KeyboardInterrupt:   # Catch interrupts (terminates correctly)
+        data.terminate()
+        comm.terminate()
+        print("Ending processes...\n") 

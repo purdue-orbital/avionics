@@ -1,7 +1,7 @@
 import serial
 import json
 import time
-from RadioModule import Module
+# from RadioModule import Module
 
 class SerialPort():
     """
@@ -43,10 +43,12 @@ class SerialPort():
             }
         }
         self.ser = serial.Serial(self.port, 115200)   # -, baud rate (from Arduino)
+        """
         try:
             self.radio = Module.get_instance(self)  # Initialize radio communication
         except Exception as e:
             print(e)
+        """
         print("Initialization complete.")
 
     def writeDict(self):
@@ -82,11 +84,22 @@ class SerialPort():
             manager: A Manager() dict object passed through by config.py
         """
         self.writeDict()
-        manager = self.json    # Add json to Manager() to pass to comm_parse
+
+        # This is straight up cancerous, but the way dict management works between
+        # processes requires the dict to be reassigned to notify the DictProxy
+        # of changes to itself
+        time.sleep(0.5)
+        temp = manager[0]
+        temp = self.json
+        # Reassign here
+        manager[0] = temp
+
+        """
         try:
             self.radio.send(json.dumps(self.json))  # Send json over radio
         except Exception as e:
             print(e)
+        """
 
     def speedTest(self, dur):
         """
