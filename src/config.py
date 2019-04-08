@@ -30,11 +30,7 @@ def commProc(d):
     Controls all command processes for the balloon flight computer. Gets data
     from dataProc using a DictProxy managed by Manager() in main.
     """
-    while True:
-        if d[0]:
-            print(d[0])
-            sleep(1)
-    """
+    
     print("Running comm_parse.py ...\n")
     ctrl = Control(5,6,0.05)
 
@@ -68,7 +64,6 @@ def commProc(d):
         mode = 1
         if (condition & IGNITION):
             ctrl.Ignition(mode)
-    """
 
 if __name__ == "__main__":
     try:
@@ -90,6 +85,7 @@ if __name__ == "__main__":
             sleep(10)
         
     except KeyboardInterrupt:   # Catch interrupts (terminates correctly)
+        print("Ending processes...")
         data.terminate()
         comm.terminate()
-        print("Ending processes...\n") 
+        print("Processes terminated.\n") 

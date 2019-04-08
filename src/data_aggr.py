@@ -17,7 +17,7 @@ class SerialPort():
             port: USB connection for Arduino in '/dev/tty*'
             manager: A Manager() dict object passed through by config.py
         """
-        print("\nInitializing {} on port {}...".format(name, port))
+        print("Initializing {} on port {}...".format(name, port))
         self.name = name
         self.port = port    # serial connection port
         self.json = {"Pressure": 0,   # Initialize dictionary structure
@@ -49,7 +49,7 @@ class SerialPort():
         except Exception as e:
             print(e)
         """
-        print("Initialization complete.")
+        print("Initialization complete.\n")
 
     def writeDict(self):
         """
