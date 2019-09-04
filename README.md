@@ -8,7 +8,7 @@ This is the GitHub repository for all software pertaining to Purdue Orbital's *H
 
 ## Getting Started ##
 
-### 1. Connecting to the Raspberry Pi (Not headless) ###
+### 1. Connecting to the Raspberry Pi ###
 
 Currently, there are four flight computers -- all RPi Model 3 B+, one of which operates in the BIDC with a monitor, keyboard, and mouse. This setup has been found to be more reliable than the following method. Connection can either be local, or over `PAL3.0`. 
 
@@ -24,7 +24,7 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
 The Pi's local IP address for `PAL3.0` is preceded by `inet`, and on the same line as `broadcast`. In this example, it is `10.186.110.99`. Follow the instructions in the next section using this IP instead of the local Pi IP.
 
 
-### 2. Connecting to the Raspberry Pi (Wireless Access Point) ###
+### 2. Connecting to the Raspberry Pi (Headless) ###
 
 Currently, there are four flight computers -- all RPi Model 3 B+, three of which share the name `AvionicsPiX`, where `X` is the system number documented on the Pi packaging. It can be connected to through SSH (Secure Shell). The Pi broadcasts its own network, called `AvionicsPiAPX`, and is used as an access point to SSH into. Users must first power on the Pi (it may take up to a minute to fully boot up). Once the Pi is booted, users should notice a new network available to connect to with the name `AvionicsPiAPX`. Connect to it using the password `PurdueOrbital`. You will now be on a local network containing the Pi and your computer. Internet is available by connecting an ethernet cable to the Pi's port -- this makes it act as an access point to `PAL3.0`.
 
