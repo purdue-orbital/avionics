@@ -1,14 +1,19 @@
 import serial
 import json
 import time
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
+
+import mpu9250
+
 # from RadioModule import Module
 
-class SerialPort():
+class Sensors():
     """
     Object to control serial port functionality.
     """
 
-    def __init__(self, name, port):
+    def __init__(self, name):
         """
         Initializes the Port object
 
@@ -17,10 +22,9 @@ class SerialPort():
             port: USB connection for Arduino in '/dev/tty*'
             manager: A Manager() dict object passed through by config.py
         """
-        print("Initializing {} on port {}...".format(name, port))
+        print("Initializing {}...".format(name))
         self.name = name
-        self.port = port    # serial connection port
-        self.json = {"Pressure": 0,   # Initialize dictionary structure
+        self.json = {"Altitude": 0,   # Initialize dictionary structure
         "GPS": {
             "longitude": 0,
             "latitude": 0
@@ -42,7 +46,15 @@ class SerialPort():
             "z": 0
             }
         }
-        self.ser = serial.Serial(self.port, 115200)   # -, baud rate (from Arduino)
+
+        # Open log file
+        self.log = open('../logs/data.log', 'a+')
+        # Write header
+        self.log.write('time (s),alt (m),long,lat,g_x (dps),g_y (dps),g_z (dps),
+                         m_x (mT),m_y (mT),m_z (mT),temp (C),a_x (mg),a_y (mg),a_z (mg)\n')
+
+        self.imu = mpu9250()  # Create IMU Object from mpu9250.py
+ 
         """
         try:
             self.radio = Module.get_instance(self)  # Initialize radio communication
@@ -55,26 +67,31 @@ class SerialPort():
         """
         Reads from Serial connection and writes to dict
         """
-        ln = self.ser.readline().decode('utf-8').rstrip()
-        if ln.split(':')[0] == "ERROR":
-            pass    # Don't write if given an error message
-        else:
-            # Break string into array
-            lst = ln.split(', ')
-            # Assigning each value in given list to dict entry
-            self.json["Pressure"] = lst[0]
-            self.json["GPS"]["longitude"] = lst[1]
-            self.json["GPS"]["latitude"] = lst[2]
-            self.json["Gyroscope"]["x"] = lst[3]
-            self.json["Gyroscope"]["y"] = lst[4]
-            self.json["Gyroscope"]["z"] = lst[5]
-            self.json["Magnetometer"]["x"] = lst[6]
-            self.json["Magnetometer"]["y"] = lst[7]
-            self.json["Magnetometer"]["z"] = lst[8]
-            self.json["Temperature"] = lst[9]
-            self.json["Accelerometer"]["x"] = lst[10]
-            self.json["Accelerometer"]["y"] = lst[11]
-            self.json["Accelerometer"]["z"] = lst[12]
+
+        gyroX, gyroY, gyroZ = readGyro()
+        magX, magY, magZ = readMagnet()
+        gpsLat, gpsLong, gpsAlt = readGPS()
+        accelX, accelY, accelZ = readAccel()
+        temp = readTemperature()
+
+        # Write to .log file
+        self.log.write(f'{0},{gpsAlt},{gpsLong},{gpsLat},{gyroX},{gyroY},{gyroZ},{magX},{magY},{magZ},
+                          {temp},{accelX},{accelY},{accelZ}\n')
+        
+        # Assigning each value in given list to dict entry
+        self.json["Altitude"] = gpsAlt
+        self.json["GPS"]["longitude"] = gpsLong
+        self.json["GPS"]["latitude"] = gpsLat
+        self.json["Gyroscope"]["x"] = gyroX
+        self.json["Gyroscope"]["y"] = gyroY
+        self.json["Gyroscope"]["z"] = gyroZ
+        self.json["Magnetometer"]["x"] = magX
+        self.json["Magnetometer"]["y"] = magY
+        self.json["Magnetometer"]["z"] = magZ
+        self.json["Temperature"] = temp
+        self.json["Accelerometer"]["x"] = accelX
+        self.json["Accelerometer"]["y"] = accelY
+        self.json["Accelerometer"]["z"] = accelZ
 
     def JSONpass(self, manager):
         """
@@ -88,7 +105,7 @@ class SerialPort():
         # This is straight up cancerous, but the way dict management works between
         # processes requires the dict to be reassigned to notify the DictProxy
         # of changes to itself
-        time.sleep(0.5)
+        time.sleep(0.01)
         temp = manager[0]
         temp = self.json
         # Reassign here
@@ -114,3 +131,34 @@ class SerialPort():
             self.writeDict()
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
+
+
+    def readAccel(self):
+        """
+        Reads acceleration from the MPU9250 chip
+        """
+        return self.imu.accel()
+
+    def readGyro(self):
+        """
+        Reads gyroscopic data from the MPU9250 chip
+        """
+        return self.imu.gyro()
+
+    def readMagnet(self):
+        """
+        Read magnetometer data from the MPU9250 chip
+        """
+        return self.imu.mag()
+
+    def readTemperature(self):
+        """
+        Reads temperature data from the MS5611 chip
+        """
+        return self.imu.temp()
+
+    def readGPS(self):
+        """
+        Reads GPS data from the NEO7M chip
+        """
+        return (longitude, latitude, altitude)

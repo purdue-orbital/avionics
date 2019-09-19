@@ -1,6 +1,6 @@
 from multiprocessing import Process, Manager
 from datetime import datetime, timedelta
-from data_aggr import SerialPort
+from data_aggr import Sensors
 from comm_parse import Control
 from time import sleep
 
@@ -13,17 +13,15 @@ def dataProc(d):
     """
     print("Running data_aggr.py ...\n")
     # Create new serial port for sensor arduino with name and USB port path
-    try:
-        port = "/dev/ttyUSB0"
-        ino = SerialPort("SensorModule", port)
+    sens = Sensors("MPU9250")
 
-        # ino.speedTest(10)
+    # ino.speedTest(10)
 
-        while True: # Iterates infinitely, sending JSON objects over radio
-            ino.JSONpass(d)
-
-    except OSError:     # Raised when Arduino isn't connected
-        print("No such file or directory {}.\n".format(port))
+    while True: # Iterates infinitely, sending JSON objects over radio
+        print("Accel: {:.3f} {:.3f} {:.3f} mg".format(sens.readAccel()))
+        print("Gyro: {:.3f} {:.3f} {:.3f} dps".format(sens.readGyro()))
+        print("Magnet: {:.3f} {:.3f} {:.3f} mT".format(sens.readMagnet()))
+        sleep(0.01)
 
 def commProc(d):
     """
@@ -75,11 +73,11 @@ if __name__ == "__main__":
 
         # Assign each function to a Process
         data = Process(target=dataProc, args=(lproxy,))
-        comm = Process(target=commProc, args=(lproxy,))
+        # comm = Process(target=commProc, args=(lproxy,))
 
         # Start processes
         data.start()
-        comm.start()
+        # comm.start()
         # Wait in main so that this can be escaped properly with ctrl+c
         while True:
             sleep(10)
@@ -87,5 +85,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:   # Catch interrupts (terminates correctly)
         print("Ending processes...")
         data.terminate()
-        comm.terminate()
+        # comm.terminate()
         print("Processes terminated.\n") 
