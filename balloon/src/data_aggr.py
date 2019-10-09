@@ -4,7 +4,8 @@ import time
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 
-import mpu9250
+from _mpu9250 import mpu9250
+
 
 # from RadioModule import Module
 
@@ -50,8 +51,7 @@ class Sensors():
         # Open log file
         self.log = open('../logs/data.log', 'a+')
         # Write header
-        self.log.write('time (s),alt (m),long,lat,g_x (dps),g_y (dps),g_z (dps),
-                         m_x (mT),m_y (mT),m_z (mT),temp (C),a_x (mg),a_y (mg),a_z (mg)\n')
+        self.log.write('time (s),alt (m),long,lat,g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C),a_x (mg),a_y (mg),a_z (mg)\n')
 
         self.imu = mpu9250()  # Create IMU Object from mpu9250.py
  
@@ -75,8 +75,7 @@ class Sensors():
         temp = readTemperature()
 
         # Write to .log file
-        self.log.write(f'{0},{gpsAlt},{gpsLong},{gpsLat},{gyroX},{gyroY},{gyroZ},{magX},{magY},{magZ},
-                          {temp},{accelX},{accelY},{accelZ}\n')
+        self.log.write(f'{0},{gpsAlt},{gpsLong},{gpsLat},{gyroX},{gyroY},{gyroZ},{magX},{magY},{magZ},{temp},{accelX},{accelY},{accelZ}\n')
         
         # Assigning each value in given list to dict entry
         self.json["Altitude"] = gpsAlt
