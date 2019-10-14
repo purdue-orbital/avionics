@@ -137,7 +137,7 @@ class mpu9250(object):
 		y = self.conv(data[2], data[3]) * lsb
 		z = self.conv(data[4], data[5]) * lsb
 
-		print('>> data', data)
+		# print('>> data', data)
 		# ans = self.convv.unpack(*data)
 		# ans = struct.unpack('<hhh', data)[0]
 		# print('func', x, y, z)
@@ -150,8 +150,8 @@ class mpu9250(object):
 		http://stackoverflow.com/questions/26641664/twos-complement-of-hex-number-in-python
 		"""
 		value = lsb | (msb << 8)
-		# if value >= (1 << 15):
-		# 	value -= (1 << 15)
+		if value >= (1 << 15):
+		        value -= (1 << 15)
 		# print(lsb, msb, value)
 		return value
 
