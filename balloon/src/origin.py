@@ -7,21 +7,17 @@ from time import sleep
 def dataProc(d):
     """
     Main process for data_aggr.py
-    Initializes serial port connected to Arduino-controlled sensor
-    module, and passes data to the RadioModule (and comm_parse.py
-    using a Manager())
+    Initializes sensor package module and passes data to the RadioModule
+    (and comm_parse.py using a Manager())
     """
+
     print("Running data_aggr.py ...\n")
-    # Create new serial port for sensor arduino with name and USB port path
     sens = Sensors("MPU9250")
 
-    # ino.speedTest(10)
-
-    while True: # Iterates infinitely, sending JSON objects over radio
-        print("Accel: {:.3f} {:.3f} {:.3f} mg".format(sens.readAccel()))
-        print("Gyro: {:.3f} {:.3f} {:.3f} dps".format(sens.readGyro()))
-        print("Magnet: {:.3f} {:.3f} {:.3f} mT".format(sens.readMagnet()))
-        sleep(0.01)
+    while True:
+        sens.readAll() # send every data point to radio/command? Bad idea
+        sens.send()
+        sens.passTo(d)
 
 def commProc(d):
     """

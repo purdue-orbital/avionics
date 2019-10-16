@@ -1,28 +1,33 @@
 import serial
 import json
 import time
+
+# Import modules from ../lib and add ../logs to PATH
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
+sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
 from _mpu9250 import mpu9250
-
-
-# from RadioModule import Module
+from RadioModule import Module
 
 class Sensors():
     """
-    Object to control serial port functionality.
+    Object-oriented approach to creating sensor functionality for
+    IMU, GPS, RTC, and radio
     """
 
-    def __init__(self, name):
+    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None):
         """
-        Initializes the Port object
+        Initializes the Sensors object
 
         Args:
-            name: String ID for serial port 
-            port: USB connection for Arduino in '/dev/tty*'
-            manager: A Manager() dict object passed through by config.py
+            name       : String ID for sensor package
+            imu_address: i2c address of MPU9250 and MS5611
+            gps_port   : Port of serial object GPS NEO 7M
+            radio_port : if not None, port of radio for ground station communication
+                                else, radio isn't used
         """
+
         print("Initializing {}...".format(name))
         self.name = name
         self.json = {"Altitude": 0,   # Initialize dictionary structure
@@ -51,33 +56,36 @@ class Sensors():
         # Open log file
         self.log = open('../logs/data.log', 'a+')
         # Write header
-        self.log.write('time (s),alt (m),long,lat,g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C),a_x (mg),a_y (mg),a_z (mg)\n')
+        self.log.write('time (s),alt (m),long,lat,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C)\n')
 
-        self.imu = mpu9250()  # Create IMU Object from mpu9250.py
-        self.start = time.time()
+        self.imu = mpu9250(mpu_address=imu_address)           # Create IMU Object from mpu9250.py
+        self.start = time.clock_gettime(time.CLOCK_REALTIME)  # Start time for logging purposes
         
-        """
-        try:
-            self.radio = Module.get_instance(self)  # Initialize radio communication
-        except Exception as e:
-            print(e)
-        """
+        if radio_port is not None:
+            try:
+                self.radio = Module.get_instance(self)  # Initialize radio communication
+            except Exception as e:
+                print(e)
+
+        else:
+            self.radio = None
+                
         print("Initialization complete.\n")
 
-    def writeDict(self):
+    def readAll(self):
         """
-        Reads from Serial connection and writes to dict
+        Reads from sensors and writes to log file
         """
 
-        gx, gy, gz = self.readGyro()
-        mx, my, mz = self.readMagnet()      # works (uncalibrated)
+        gx, gy, gz = self.readGyro()    # works, but has formatting/overflow errors
+        mx, my, mz = self.readMagnet()  # gets data, but is garbage 
         lat, lon, alt = self.readGPS()  # works (uncalibrated)
-        ax, ay, az = self.readAccel() # works (uncalibrated)
-        temp = self.readTemperature()             # works (uncalibrated)
-        t = time.time() - self.start
+        ax, ay, az = self.readAccel()   # works (uncalibrated)
+        temp = self.readTemperature()   # works (uncalibrated)
+        t = time.clock_gettime(time.CLOCK_REALTIME) - self.start
         
         # Write to .log file
-        self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lon,lat,gx,gy,gz,mx,my,mz,temp,ax,ay,az))
+        self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lon,lat,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
         
         # Assigning each value in given list to dict entry
         self.json["Altitude"] = alt
@@ -94,15 +102,13 @@ class Sensors():
         self.json["Accelerometer"]["y"] = ay
         self.json["Accelerometer"]["z"] = az
 
-    def JSONpass(self, manager):
+    def passTo(self, manager):
         """
-        Overwrites dict with sensor data and sends over radio
+        Writes most recent data to a shared dictionary w/ command thread
 
         Args:
-            manager: A Manager() dict object passed through by config.py
+            manager: A Manager() dict object passed through by origin.py
         """
-        self.writeDict()
-
         # This is straight up cancerous, but the way dict management works between
         # processes requires the dict to be reassigned to notify the DictProxy
         # of changes to itself
@@ -112,16 +118,43 @@ class Sensors():
         # Reassign here
         manager[0] = temp
 
+    def send(self):
         """
-        try:
-            self.radio.send(json.dumps(self.json))  # Send json over radio
-        except Exception as e:
-            print(e)
+        Sends most recent data collected over radio
         """
+
+        if self.radio is not None:
+            try:
+                self.radio.send(json.dumps(self.json))  # Send json over radio
+            except Exception as e:
+                print(e)
+
+    def printd(self):
+        """
+        Prints most recent data collected for debugging
+        """
+
+        alt = self.json["Altitude"]
+        lon = self.json["GPS"]["longitude"]
+        lat = self.json["GPS"]["latitude"]
+        gx = self.json["Gyroscope"]["x"]
+        gy = self.json["Gyroscope"]["y"]
+        gz = self.json["Gyroscope"]["z"]
+        mx = self.json["Magnetometer"]["x"]
+        my = self.json["Magnetometer"]["y"]
+        mz = self.json["Magnetometer"]["z"]
+        temp = self.json["Temperature"]
+        ax = self.json["Accelerometer"]["x"]
+        ay = self.json["Accelerometer"]["y"]
+        az = self.json["Accelerometer"]["z"]
+        t = time.clock_gettime(time.CLOCK_REALTIME) - self.start
+        
+        print("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lon,lat,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
+        
 
     def speedTest(self, dur):
         """
-        Tests the speed of data acquisition from Arduino for a given time.
+        Tests the speed of data acquisition from sensors for a given time.
 
         Args:
             dur: duration (in seconds) of test
@@ -129,7 +162,7 @@ class Sensors():
         start = time.time()
         i = 0
         while time.time() < start + dur:
-            self.writeDict()
+            self.readAll()
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
 
@@ -166,8 +199,10 @@ class Sensors():
 
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
-
+    print(f"The current time is {time.clock_gettime(time.CLOCK_REALTIME)}\n")
+    
     sens = Sensors("MPU9250")
 
     while True:
-        sens.writeDict()
+        sens.readAll()
+        sens.printd()
