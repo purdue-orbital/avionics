@@ -56,7 +56,7 @@ class Sensors():
         # Open log file
         self.log = open('../logs/data.log', 'a+')
         # Write header
-        self.log.write('time (s),alt (m),long,lat,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C)\n')
+        self.log.write('time (s),alt (m),lat,long,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C)\n')
 
         self.imu = mpu9250(mpu_address=imu_address)           # Create IMU Object from mpu9250.py
         self.start = time.clock_gettime(time.CLOCK_REALTIME)  # Start time for logging purposes
@@ -85,7 +85,7 @@ class Sensors():
         t = time.clock_gettime(time.CLOCK_REALTIME) - self.start
         
         # Write to .log file
-        self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lon,lat,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
+        self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
         
         # Assigning each value in given list to dict entry
         self.json["Altitude"] = alt
@@ -149,7 +149,7 @@ class Sensors():
         az = self.json["Accelerometer"]["z"]
         t = time.clock_gettime(time.CLOCK_REALTIME) - self.start
         
-        print("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lon,lat,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
+        print("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
         
 
     def speedTest(self, dur):
