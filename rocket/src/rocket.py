@@ -9,7 +9,6 @@ sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
 from mpu9 import mpu9250
 from ds32 import DS3231
-# from RadioModule import Module
 
 class Sensors():
     """
@@ -17,7 +16,7 @@ class Sensors():
     IMU, GPS, RTC, and radio
     """
 
-    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None, clock_pin=17):
+    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', clock_pin=17):
         """
         Initializes the Sensors object
 
@@ -25,8 +24,7 @@ class Sensors():
             name       : String ID for sensor package
             imu_address: i2c address of MPU9250 and MS5611
             gps_port   : Port of serial object GPS NEO 7M
-            radio_port : if not None, port of radio for ground station communication
-                                else, radio isn't used
+            clock_pin  : GPIO pin the SQW wire of DS3231 is connected to
         """
 
         print("Initializing {}...".format(name))
@@ -63,15 +61,7 @@ class Sensors():
         self.gps = serial.Serial(gps_port, 9600, timeout=0.5) # Create Serial Object for the NEO 7M GPS
 
         self.last = (0, 'N', 0, 'E', 0)
-        
-        if radio_port is not None:  # Create radio object if desired
-            try:
-                self.radio = Module.get_instance(self)  # Initialize radio communication
-            except Exception as e:
-                print(e)
-        else:
-            self.radio = None
-                
+                        
         print("Initialization complete.\n")
 
     def readAll(self):
@@ -105,33 +95,7 @@ class Sensors():
         self.json["Accelerometer"]["y"] = ay
         self.json["Accelerometer"]["z"] = az
 
-    def passTo(self, manager):
-        """
-        Writes most recent data to a shared dictionary w/ command thread
-
-        Args:
-            manager: A Manager() dict object passed through by origin.py
-        """
-        # This is straight up cancerous, but the way dict management works between
-        # processes requires the dict to be reassigned to notify the DictProxy
-        # of changes to itself
-        time.sleep(0.01)
-        temp = manager[0]
-        temp = self.json
-        # Reassign here
-        manager[0] = temp
-
-    def send(self):
-        """
-        Sends most recent data collected over radio
-        """
-
-        if self.radio is not None:
-            try:
-                self.radio.send(json.dumps(self.json))  # Send json over radio
-            except Exception as e:
-                print(e)
-
+        
     def printd(self):
         """
         Prints most recent data collected for debugging
@@ -169,6 +133,7 @@ class Sensors():
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
 
+        
     def readAccel(self):
         """
         Reads acceleration from the MPU9250 chip
@@ -177,6 +142,7 @@ class Sensors():
             return self.imu.accel
         except OSError:
             return (-999, -999, -999)
+
         
     def readGyro(self):
         """
@@ -187,6 +153,7 @@ class Sensors():
         except OSError:
             return (-999, -999, -999)
 
+        
     def readMagnet(self):
         """
         Read magnetometer data from the MPU9250 chip
@@ -195,6 +162,7 @@ class Sensors():
             return self.imu.mag
         except OSError:
             return (-999, -999, -999)
+
         
     def readTemperature(self):
         """
@@ -205,6 +173,7 @@ class Sensors():
         except OSError:
             return -999
 
+        
     def readGPS(self, printing=False):
         """
         Reads GPS data from the NEO7M chip
@@ -222,6 +191,7 @@ class Sensors():
             else:
                 self.last = (-999, 'ERR', -999, 'ERR', -999)
 
+                
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
     

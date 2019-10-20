@@ -27,6 +27,7 @@ class Sensors():
             gps_port   : Port of serial object GPS NEO 7M
             radio_port : if not None, port of radio for ground station communication
                                 else, radio isn't used
+            clock_pin  : GPIO pin the SQW line from the DS3231 is connected to
         """
 
         print("Initializing {}...".format(name))
