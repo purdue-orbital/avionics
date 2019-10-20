@@ -51,7 +51,7 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
 
    You are now connected to the Pi via SSH. You may also be able to type `ssh pi@192.168.#.1` into the command prompt and proceed as follows, but I'm not 100% on that. If connection fails, see **Troubleshooting**.
 
-*  **MacOS Users:** {Not yet determined}
+*  **MacOS Users:** Same process as Windows users, except through the terminal
 
 
 ## Troubleshooting ##
