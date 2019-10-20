@@ -44,7 +44,7 @@ class Control:
             GPIO.output(self.qdmpin,True)
         else:
             GPIO.output(self.qdmpin,False)
-            self.radio.send(json.dumps({"QDM":"Activated"}))
+            self.radio.send(json.dumps({"QDM":1}))
         
         return 0
 
