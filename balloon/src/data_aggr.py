@@ -1,13 +1,13 @@
+import sys, os
 import serial
 import json
+import pynmea2
 
-# Import modules from ../lib and add ../logs to PATH
-import sys, os
+# Import add ../logs/ and ../lib/ to PATH
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
-import pynmea2
-from _mpu9250 import mpu9250
+from mpu9 import mpu9250
 from ds32 import DS3231
 # from RadioModule import Module
 
@@ -54,50 +54,38 @@ class Sensors():
             }
         }
 
-        # Open log file
+        # Open log file and write header
         self.log = open('../logs/data.log', 'a+')
-        # Write header
         self.log.write('time (s),alt (m),lat,long,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C)\n')
-        # Create clock object
-        self.clock = DS3231(clock_pin)
-
-        self.imu = mpu9250(mpu_address=imu_address)           # Create IMU Object from mpu9250.py
-        self.gps = serial.Serial(gps_port, 9600, timeout=0.5)
+        
+        self.clock = DS3231(clock_pin)                        # Create DS3231 Object from ds32.py
+        self.imu = mpu9250(mpu_address=imu_address)           # Create mpu9250 Object from mpu9.py
+        self.gps = serial.Serial(gps_port, 9600, timeout=0.5) # Create Serial Object for the NEO 7M GPS
 
         self.last = (0, 'N', 0, 'E', 0)
         
-        if radio_port is not None:
+        if radio_port is not None:  # Create radio object if desired
             try:
                 self.radio = Module.get_instance(self)  # Initialize radio communication
             except Exception as e:
                 print(e)
-
         else:
             self.radio = None
                 
         print("Initialization complete.\n")
 
-    def readAll(self, gpsPrint=False):
+    def readAll(self):
         """
         Reads from sensors and writes to log file
         """
 
-        gx, gy, gz = self.readGyro()    # works, but has formatting/overflow errors
-        mx, my, mz = self.readMagnet()  # gets data, but is garbage 
-        self.readGPS(printing=gpsPrint)
-        lat, _, lon, _, alt = self.last  # works (uncalibrated)
+        gx, gy, gz = self.readGyro()    # works, but negative numbers overflow to 250 dps
+        mx, my, mz = self.readMagnet()  # gets data, but is garbage
+        self.readGPS()                  # works, with occasional SerialException: device reports readiness to read
+        lat, _, lon, _, alt = self.last
         ax, ay, az = self.readAccel()   # works (uncalibrated)
         temp = self.readTemperature()   # works (uncalibrated)
         t = self.clock.time
-        
-        if lat != '':
-            lat = float(lat)
-            lon = float(lon)
-            alt = float(alt)
-        else:
-            lat = 0
-            lon = 0
-            alt = 0
             
         # Write to .log file
         self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
@@ -174,9 +162,9 @@ class Sensors():
         Args:
             dur: duration (in seconds) of test
         """
-        start = time.time()
+        start = self.clock.time
         i = 0
-        while time.time() < start + dur:
+        while self.clock.time < start + dur:
             self.readAll()
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
@@ -229,7 +217,10 @@ class Sensors():
             if printing:
                 print("Timestamp: %s -- Lat: %s %s -- Lon: %s %s -- Altitude: %s %s" % (msg.timestamp,msg.lat,msg.lat_dir,msg.lon,msg.lon_dir,msg.altitude,msg.altitude_units))
 
-            self.last = (msg.lat, msg.lat_dir, msg.lon, msg.lon_dir, msg.altitude)
+            if msg.lat != '':
+                self.last = (msg.lat, msg.lat_dir, msg.lon, msg.lon_dir, msg.altitude)
+            else:
+                self.last = (-999, 'ERR', -999, 'ERR', -999)
 
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
