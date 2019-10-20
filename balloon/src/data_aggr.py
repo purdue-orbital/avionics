@@ -1,14 +1,15 @@
 import serial
 import json
-import time
 
 # Import modules from ../lib and add ../logs to PATH
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
+import pynmea2
 from _mpu9250 import mpu9250
-from RadioModule import Module
+from ds32 import DS3231
+# from RadioModule import Module
 
 class Sensors():
     """
@@ -16,7 +17,7 @@ class Sensors():
     IMU, GPS, RTC, and radio
     """
 
-    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None):
+    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None, clock_pin=17):
         """
         Initializes the Sensors object
 
@@ -57,9 +58,13 @@ class Sensors():
         self.log = open('../logs/data.log', 'a+')
         # Write header
         self.log.write('time (s),alt (m),lat,long,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),m_z (mT),temp (C)\n')
+        # Create clock object
+        self.clock = DS3231(clock_pin)
 
         self.imu = mpu9250(mpu_address=imu_address)           # Create IMU Object from mpu9250.py
-        self.start = time.clock_gettime(time.CLOCK_REALTIME)  # Start time for logging purposes
+        self.gps = serial.Serial(gps_port, 9600, timeout=0.5)
+
+        self.last = (0, 'N', 0, 'E', 0)
         
         if radio_port is not None:
             try:
@@ -72,18 +77,28 @@ class Sensors():
                 
         print("Initialization complete.\n")
 
-    def readAll(self):
+    def readAll(self, gpsPrint=False):
         """
         Reads from sensors and writes to log file
         """
 
         gx, gy, gz = self.readGyro()    # works, but has formatting/overflow errors
         mx, my, mz = self.readMagnet()  # gets data, but is garbage 
-        lat, lon, alt = self.readGPS()  # works (uncalibrated)
+        self.readGPS(printing=gpsPrint)
+        lat, _, lon, _, alt = self.last  # works (uncalibrated)
         ax, ay, az = self.readAccel()   # works (uncalibrated)
         temp = self.readTemperature()   # works (uncalibrated)
-        t = time.clock_gettime(time.CLOCK_REALTIME) - self.start
+        t = self.clock.time
         
+        if lat != '':
+            lat = float(lat)
+            lon = float(lon)
+            alt = float(alt)
+        else:
+            lat = 0
+            lon = 0
+            alt = 0
+            
         # Write to .log file
         self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
         
@@ -147,11 +162,11 @@ class Sensors():
         ax = self.json["Accelerometer"]["x"]
         ay = self.json["Accelerometer"]["y"]
         az = self.json["Accelerometer"]["z"]
-        t = time.clock_gettime(time.CLOCK_REALTIME) - self.start
+        t = self.clock.time
         
         print("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
-        
 
+        
     def speedTest(self, dur):
         """
         Tests the speed of data acquisition from sensors for a given time.
@@ -166,40 +181,58 @@ class Sensors():
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
 
-
     def readAccel(self):
         """
         Reads acceleration from the MPU9250 chip
         """
-        return self.imu.accel
-
+        try:
+            return self.imu.accel
+        except OSError:
+            return (-999, -999, -999)
+        
     def readGyro(self):
         """
         Reads gyroscopic data from the MPU9250 chip
         """
-        return self.imu.gyro
+        try:
+            return self.imu.gyro
+        except OSError:
+            return (-999, -999, -999)
 
     def readMagnet(self):
         """
         Read magnetometer data from the MPU9250 chip
         """
-        return self.imu.mag
-
+        try:
+            return self.imu.mag
+        except OSError:
+            return (-999, -999, -999)
+        
     def readTemperature(self):
         """
         Reads temperature data from the MS5611 chip
         """
-        return self.imu.temp
+        try:
+            return self.imu.temp
+        except OSError:
+            return -999
 
-    def readGPS(self):
+    def readGPS(self, printing=False):
         """
         Reads GPS data from the NEO7M chip
         """
-        return (0, 0, 0)
+        string = self.gps.readline().decode('utf-8')
+        
+        if (string.find('GGA') > 0):
+            msg = pynmea2.parse(string)
+
+            if printing:
+                print("Timestamp: %s -- Lat: %s %s -- Lon: %s %s -- Altitude: %s %s" % (msg.timestamp,msg.lat,msg.lat_dir,msg.lon,msg.lon_dir,msg.altitude,msg.altitude_units))
+
+            self.last = (msg.lat, msg.lat_dir, msg.lon, msg.lon_dir, msg.altitude)
 
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
-    print(f"The current time is {time.clock_gettime(time.CLOCK_REALTIME)}\n")
     
     sens = Sensors("MPU9250")
 
