@@ -1,5 +1,6 @@
 import logging
 import sys
+import traceback
 import json
 
 from digi.xbee.devices import XBeeDevice, XBee64BitAddress, RemoteXBeeDevice, XBeeException
@@ -9,15 +10,18 @@ from digi.xbee.devices import XBeeDevice, XBee64BitAddress, RemoteXBeeDevice, XB
 # - For windows, it will be 'COM#'
 #
 # where # is the port number.
-LOCAL_PORT = "COM7"
+LOCAL_PORT = "/dev/ttyS7"
 
 # Baud rate of the local device
 BAUD_RATE = 9600
 
-DATA_TO_SEND = "Hello XBee!"
-
 # Remote node MAC address in hexadecimal format
 REMOTE_NODE_ADDRESS = "0013A2004148887C"
+
+OK = "\u001b[32m"
+WARN = "\u001b[33m"
+ERR = "\u001b[31m"
+NORM = "\u001b[0m"
 
 
 class Module:
@@ -39,54 +43,62 @@ class Module:
 
 class ModuleSingleton:
     def __init__(self):
-        self.device = XBeeDevice(LOCAL_PORT, BAUD_RATE)
-        self.device.open()
+
+        try:
+            self.device = XBeeDevice(LOCAL_PORT, BAUD_RATE)
+            self.device.set_sync_ops_timeout(10)
+            self.device.open()
+        except Exception as e:
+            print(ERR + "Local Device Instantiation Error" + NORM)
+            print(e)
+
+        def data_receive_callback(msg):
+            data = msg.data.decode("utf8")
+
+            json_data = json.loads(data)
+
+            print(json_data)
+
+            self.queue.put(json_data)
+
+        try:
+            self.device.add_data_received_callback(data_receive_callback)
+        except Exception as e:
+            print(ERR + "Callback Failure" + NORM)
+            print(e)
+            # self.reset_radio()
+
         self.remote_device = None
         self.queue = None
 
         try:
             self.remote_device = RemoteXBeeDevice(self.device, XBee64BitAddress.from_hex_string(REMOTE_NODE_ADDRESS))
+            print("Remote Device Address: " + str(self.remote_device))
             if self.remote_device is None:
-                print("Could not find the remote device")
+                print(ERR + "Could not find the remote device" + NORM)
         except XBeeException:
-            print("Exception has occurred")
+            print(ERR + "Remote Device Instantiation Error" + NORM)
 
     def send(self, data):
-        print("Testing data: " + data)
         try:
-            print("Sending data to %s >> %s..." % (self.remote_device.get_64bit_addr(), DATA_TO_SEND))
-
-            logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format="[root] %(levelname)s - %(message)s")
-
-            logger = logging.getLogger(self.device.get_node_id())
-
             self.device.send_data(self.remote_device, data)
-
-            print("Success")
-
-        finally:
-            if self.device is not None and self.device.is_open():
-                # self.device.close()
-                print("Commented out close")
+            print(OK + "Sent" + NORM)
+        except XBeeException as e:
+            print(ERR + "Sending Error" + NORM)
+            print(repr(e))
+            traceback.print_exc()
+            self.reset_radio()
 
     def bind_queue(self, queue):
         self.queue = queue
 
-    def receive(self):
+    def reset_radio(self):
+        print(WARN + "Resetting Radio Connection" + NORM)
+        self.device.reset()
+
+    def close(self):
         try:
-            def data_receive_callback(msg):
-                data = msg.data.decode("utf8")
-
-                json_data = json.loads(data)
-
-                self.queue.put(json_data)
-
-
-            self.device.add_data_received_callback(data_receive_callback)
-
-            print("Waiting for data...\n")
-            input()
-        finally:
-            if self.device is not None and self.device.is_open():
-                #self.device.close()
-                print("Commented out close")
+            self.device.close()
+        except Exception as e:
+            print(ERR + "Closing Error" + NORM)
+            print(e)

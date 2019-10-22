@@ -7,10 +7,10 @@ if __name__ == '__main__':
     sens = Sensors("MPU9250")
 
     while True:
-        a = sens.readAccel()
-        g = sens.readGyro()
-        m = sens.readMagnet()
-        t = sens.readTemperature()
+        a = sens.read_accel()
+        g = sens.read_gyro()
+        m = sens.read_magnet()
+        t = sens.read_temperature()
         
         print("Accel: {:.3f} {:.3f} {:.3f} g".format(*a))
         print("Gyro: {:.3f} {:.3f} {:.3f} dps".format(*g))
@@ -19,4 +19,3 @@ if __name__ == '__main__':
         
         sleep(1)
 
-        

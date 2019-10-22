@@ -4,6 +4,7 @@ from data_aggr import Sensors
 from comm_parse import Control
 from time import sleep
 
+
 def dataProc(d):
     """
     Main process for data_aggr.py
@@ -15,29 +16,30 @@ def dataProc(d):
     sens = Sensors("MPU9250")
 
     while True:
-        sens.readAll() # send every data point to radio/command? Bad idea
+        sens.read_all()  # send every data point to radio/command? Bad idea
         sens.send()
-        sens.passTo(d)
+        sens.pass_to(d)
+
 
 def commProc(d):
     """
     Controls all command processes for the balloon flight computer. Gets data
     from dataProc using a DictProxy managed by Manager() in main.
     """
-    
+
     print("Running comm_parse.py ...\n")
-    ctrl = Control(5,6,0.05)
+    ctrl = Control(5, 6, 0.05)
 
     result = ctrl.ConnectionCheck()
-    endT = datetime.now() + timedelta(seconds = 10)
-    while ((result == 0) & (datetime.now() < endT)):
+    endT = datetime.now() + timedelta(seconds=10)
+    while (result == 0) & (datetime.now() < endT):
         result = ctrl.ConnectionCheck()
-    if (result == 0):
+    if result == 0:
         ctrl.QDMCheck(0)
     else:
         while not ctrl.commands.empty():
             GSDATA = ctrl.receivedata()
-    
+
             QDM = GSDATA['QDM']
             IGNITION = GSDATA['Ignition']
             #    CDM = GSDATA['CDM']
@@ -51,13 +53,14 @@ def commProc(d):
         ## NEED CHANGES ###
         rocket = d
         balloon = d
-            
-        ctrl.readdata(rocket,balloon)
-        
+
+        ctrl.readdata(rocket, balloon)
+
         condition = ctrl.dataerrorcheck()
         mode = 1
-        if (condition & IGNITION):
+        if condition & IGNITION:
             ctrl.Ignition(mode)
+
 
 if __name__ == "__main__":
     try:
@@ -77,9 +80,9 @@ if __name__ == "__main__":
         # Wait in main so that this can be escaped properly with ctrl+c
         while True:
             sleep(10)
-        
-    except KeyboardInterrupt:   # Catch interrupts (terminates correctly)
+
+    except KeyboardInterrupt:  # Catch interrupts (terminates correctly)
         print("Ending processes...")
         data.terminate()
         # comm.terminate()
-        print("Processes terminated.\n") 
+        print("Processes terminated.\n")
