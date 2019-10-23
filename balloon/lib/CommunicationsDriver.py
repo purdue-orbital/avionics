@@ -24,20 +24,11 @@ class CommSingleton:
     def __init__(self):
         self.__radio = Module.get_instance(self)
 
-    def send(self, command):
-
-        command_json = {}
-
-
-        command_json["mode"] = "testing"
-        command_json["command"] = command
-
-        command_json["mode"] = "flight"
-        command_json["command"] = command
+    def send(self, command, command_type):
 
         try:
-            if not len(command_json) == 0:
-                print(command_json)
-                self.__radio.send(json.dumps(command_json))
+            if not len(command) == 0:
+                print(command)
+                self.__radio.send(json.dumps(command))
         except Exception as e:
             print(e)

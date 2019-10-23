@@ -33,28 +33,26 @@ class Sensors:
 
         print("Initializing {}...".format(name))
         self.name = name
-        self.json = {"Altitude": 0,  # Initialize dictionary structure
-                     "GPS": {
-                         "longitude": 0,
-                         "latitude": 0
-                     },
-                     "Gyroscope": {
-                         "x": 0,
-                         "y": 0,
-                         "z": 0
-                     },
-                     "Magnetometer": {
-                         "x": 0,
-                         "y": 0,
-                         "z": 0
-                     },
-                     "Temperature": 0,
-                     "Accelerometer": {
-                         "x": 0,
-                         "y": 0,
-                         "z": 0
-                     }
-                     }
+        self.json = {
+                      "origin": "balloon",
+                      "alt": 0,
+                      "GPS": {
+                        "long": 0,
+                        "lat": 0
+                      },
+                      "gyro": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "mag": 0,
+                      "temp": 0,
+                      "acc": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      }
+                    }
 
         # Open log file
         self.log = open('../logs/data.log', 'a+')
@@ -65,6 +63,8 @@ class Sensors:
 
         self.imu = mpu9250(mpu_address=imu_address)  # Create IMU Object from mpu9250.py
         self.start = time.clock_gettime(time.CLOCK_REALTIME)  # Start time for logging purposes
+
+        self.c = Comm.get_instance()
 
         if radio_port is not None:
             try:
@@ -130,11 +130,7 @@ class Sensors:
         Sends most recent data collected over radio
         """
 
-        if self.radio is not None:
-            try:
-                self.radio.send(json.dumps(self.json))  # Send json over radio
-            except Exception as e:
-                print(e)
+        self.c.send(self.json, "balloon")
 
     def printd(self):
         """
