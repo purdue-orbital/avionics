@@ -25,13 +25,12 @@ import time
 import RPi.GPIO as GPIO  
 GPIO.setmode(GPIO.BCM)
 
-# Set GPIO pin 17 to read clock interrupt
-GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 # Set bus to /dev/12c-1 (rather than -0)
 bus = smbus.SMBus(1)
 
 DS32_ADDRESS = 0x68
 CONTROL_REGISTER = 0x0e
+TEMP_REGISTER = 0x11
 SQW = 0
 
 class DS3231:
@@ -40,11 +39,14 @@ class DS3231:
     def __init__(self, pin):
 
         self.SQW = 0
-        
+
+        # Set GPIO pin to read clock interrupt
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
         # Sets 1.024 kHz mode for square wave on SQW pin
-        bus.write_byte_data(DS32_ADDRESS, CONTROL_REGISTER, 0b01001000)
+        bus.write_byte_data(DS32_ADDRESS, CONTROL_REGISTER, 0b01101000)
         
-        if (bus.read_byte_data(DS32_ADDRESS, CONTROL_REGISTER) & 0b01001000) != 0b01001000:
+        if (bus.read_byte_data(DS32_ADDRESS, CONTROL_REGISTER) & 0b01101000) != 0b01101000:
             raise ValueError("DS3231 mode not set correctly!")
         
         # Create read thread for INT pin (17)
@@ -57,13 +59,20 @@ class DS3231:
     def time(self):
         return self.SQW / 1024.0
 
+    @property
+    def temp(self):
+        msb = bus.read_byte_data(DS32_ADDRESS, TEMP_REGISTER)
+        lsb = bus.read_byte_data(DS32_ADDRESS, TEMP_REGISTER + 1)
+        return msb + (lsb >> 6) * 0.25
+
         
 if __name__ == "__main__":    
     clock = DS3231(17)
     
     try:
         while True:
-            print("{:.3f}".format(clock.time / 1024))
+            print("{:.3f}".format(clock.time))
+            print("{:.2f}".format(clock.temp))
             time.sleep(1)
     except KeyboardInterrupt:
         print("Stop.\n")
