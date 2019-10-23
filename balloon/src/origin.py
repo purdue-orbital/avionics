@@ -18,7 +18,7 @@ def dataProc(d):
     while True:
         sens.readAll()  # send every data point to radio/command? Bad idea
         sens.send()
-        sens.pass_to(d)
+        sens.passTo(d)
 
 
 def commProc(d):
