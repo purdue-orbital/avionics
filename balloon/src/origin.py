@@ -16,7 +16,7 @@ def dataProc(d):
     sens = Sensors("MPU9250")
 
     while True:
-        sens.read_all()  # send every data point to radio/command? Bad idea
+        sens.readAll()  # send every data point to radio/command? Bad idea
         sens.send()
         sens.pass_to(d)
 
