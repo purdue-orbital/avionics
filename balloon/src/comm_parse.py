@@ -56,6 +56,7 @@ class Control:
             GPIO.output(self.qdmpin,True)
         else:
             GPIO.output(self.qdmpin,False)
+
             data = self.generate_status_json()
             data["QDM"] = 1
             self.c.send(data, "status")
