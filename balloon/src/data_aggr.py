@@ -78,7 +78,7 @@ class Sensors:
 
         print("Initialization complete.\n")
 
-    def read_all(self):
+    def readAll(self):
         """
         Reads from sensors and writes to log file
         """
@@ -111,7 +111,7 @@ class Sensors:
         self.json["Accelerometer"]["y"] = ay
         self.json["Accelerometer"]["z"] = az
 
-    def pass_to(self, manager):
+    def passTo(self, manager):
         """
         Writes most recent data to a shared dictionary w/ command thread
 
@@ -191,7 +191,7 @@ class Sensors:
         except OSError:
             return (-999, -999, -999)
 
-    def read_magnet(self):
+    def readMagnet(self):
         """
         Read magnetometer data from the MPU9250 chip
         """
@@ -231,5 +231,5 @@ if __name__ == "__main__":
     sens = Sensors("MPU9250")
 
     while True:
-        sens.read_all()
+        sens.readAll()
         sens.printd()
