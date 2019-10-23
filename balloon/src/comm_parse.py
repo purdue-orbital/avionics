@@ -7,8 +7,19 @@ import time
 from array import *
 import os
 import queue
+from CommunicationsDriver import Comm
+
 
 class Control:
+
+    @staticmethod
+    def generate_status_json(self):
+        json = {}
+        json["origin"] = "status"
+        json["QDM"] = 0
+        json["Ignition"] = 0
+        json["Stabilization"] = 0
+        return json
 
     def __init__(self,qdmpin,ignitionpin,error):
         self.radio = Module.get_instance(self)
@@ -25,10 +36,11 @@ class Control:
         
         self.balloon = None
         self.rocket = None
+
+        self.c = self.Comm.get_instance()
         
-        self.commands = queue.Queue(maxsize = 10)
-        
-        
+        self.commands = queue.Queue(maxsize=10)
+
     def QDMCheck(self, QDM):
         '''
         This checks if we need to QDM.
@@ -40,14 +52,17 @@ class Control:
         return void
         '''
                 
-        if (QDM == 1):
+        if QDM == 1:
             GPIO.output(self.qdmpin,True)
         else:
             GPIO.output(self.qdmpin,False)
-            self.radio.send(json.dumps({"QDM":1}))
+
+            data = self.generate_status_json()
+            data["QDM"] = 1
+            self.c.send(data, "status")
+            # self.radio.send(json.dumps({"QDM": "Activated"}))
         
         return 0
-
 
     def Ignition(self, mode):
         '''
@@ -67,23 +82,27 @@ class Control:
         Launch = self.LaunchCondition()
         if Launch:
             if (mode == 1):
-                #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
+                # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
-                self.radio.send(json.dumps({"Ignition":"Activated"}))
+                data = self.generate_status_json(self)
+                data["Ignition"] = 1
+                self.c.send(data, "status")
+                # self.radio.send(json.dumps({"Ignition": "Activated"}))
                 time.sleep(0.1)
-                #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
+                # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
             elif (mode == 2):
-                #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
+                # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
-                self.radio.send(json.dumps({"Ignition":"Activated"}))
+                data = self.generate_status_json(self)
+                data["Ignition"] = 1
+                self.c.send(data, "status")
+                # self.radio.send(json.dumps({"Ignition": "Activated"}))
                 time.sleep(10)
-                #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
+                # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
-                
 
         return 0
-
 
     def readdata(self, rocket,balloon):
 
@@ -118,7 +137,7 @@ class Control:
         ROCKET_ACC_Y = rocket['acc']['y']
         ROCKET_ACC_Z = rocket['acc']['z']
 
-        self.rocket = [ROCKET_ALT,ROCKET_LONG,ROCKET_LATI,ROCKET_GYRO_X,ROCKET_GYRO_Y,ROCKET_GYRO_Z,ROCKET_MAGNET_X,ROCKET_MAGNET_Y,ROCKET_MAGNET_Z,ROCKET_TEMP,ROCKET_ACC_X,ROCKET_ACC_Y,ROCKET_ACC_Z]
+        self.rocket = [ROCKET_ALT, ROCKET_LONG, ROCKET_LATI, ROCKET_GYRO_X, ROCKET_GYRO_Y, ROCKET_GYRO_Z, ROCKET_MAGNET_X, ROCKET_MAGNET_Y, ROCKET_MAGNET_Z, ROCKET_TEMP, ROCKET_ACC_X, ROCKET_ACC_Y, ROCKET_ACC_Z]
 
         BAL_LONG = balloon['GPS']['long']
         BAL_LATI = balloon['GPS']['lat']
@@ -139,24 +158,21 @@ class Control:
         BAL_ACC_Y = balloon['acc']['y']
         BAL_ACC_Z = balloon['acc']['z']
 
-
-        self.balloon = [BAL_ALT,BAL_LONG,BAL_LATI,BAL_GYRO_X,BAL_GYRO_Y,BAL_GYRO_Z,BAL_MAGNET_X,BAL_MAGNET_Y,BAL_MAGNET_Z,BAL_TEMP,BAL_ACC_X,BAL_ACC_Y,BAL_ACC_Z]
+        self.balloon = [BAL_ALT, BAL_LONG, BAL_LATI, BAL_GYRO_X, BAL_GYRO_Y, BAL_GYRO_Z, BAL_MAGNET_X, BAL_MAGNET_Y, BAL_MAGNET_Z, BAL_TEMP, BAL_ACC_X, BAL_ACC_Y, BAL_ACC_Z]
 
     def dataerrorcheck(self):
         result = False
         
-        for i in range (0,12,1):
+        for i in range (0, 12, 1):
             rangecheck = abs(self.rocket[i]-self.balloon[i]) / self.rocket[i]
             
-            if (rangecheck > self.error):
+            if rangecheck > self.error:
                 result = False
                 break
             else:
                 result = True
         
         return result
-
-
 
     def LaunchCondition(self):
         '''
@@ -173,8 +189,6 @@ class Control:
         direction = (degree <= 100) & (degree >= 80)
             
         return (altitude & spinrate & direction)
-
-
 
     def ConnectionCheck(self):
 
