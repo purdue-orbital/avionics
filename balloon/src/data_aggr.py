@@ -78,17 +78,17 @@ class Sensors:
 
         print("Initialization complete.\n")
 
-    def readAll(self):
+    def read_all(self):
         """
         Reads from sensors and writes to log file
         """
 
-        gx, gy, gz = self.readGyro()    # works, but negative numbers overflow to 250 dps
-        mx, my, mz = self.readMagnet()  # gets data, but is garbage
-        self.readGPS()                  # works, with occasional SerialException: device reports readiness to read
+        gx, gy, gz = self.read_gyro()    # works, but negative numbers overflow to 250 dps
+        mx, my, mz = self.read_magnet()  # gets data, but is garbage
+        self.read_GPS()                  # works, with occasional SerialException: device reports readiness to read
         lat, _, lon, _, alt = self.last
-        ax, ay, az = self.readAccel()   # works (uncalibrated)
-        temp = self.readTemperature()   # works (uncalibrated)
+        ax, ay, az = self.read_accel()   # works (uncalibrated)
+        temp = self.read_temperature()   # works (uncalibrated)
         t = self.clock.time
 
         # Write to .log file
@@ -111,7 +111,7 @@ class Sensors:
         self.json["Accelerometer"]["y"] = ay
         self.json["Accelerometer"]["z"] = az
 
-    def passTo(self, manager):
+    def pass_to(self, manager):
         """
         Writes most recent data to a shared dictionary w/ command thread
 
@@ -158,7 +158,7 @@ class Sensors:
             "{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
                 t, alt, lat, lon, ax, ay, az, gx, gy, gz, mx, my, mz, temp))
 
-    def speedTest(self, dur):
+    def speed_test(self, dur):
         """
         Tests the speed of data acquisition from sensors for a given time.
 
@@ -173,7 +173,7 @@ class Sensors:
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
 
-    def readAccel(self):
+    def read_accel(self):
         """
         Reads acceleration from the MPU9250 chip
         """
@@ -182,7 +182,7 @@ class Sensors:
         except OSError:
             return (-999, -999, -999)
         
-    def readGyro(self):
+    def read_gyro(self):
         """
         Reads gyroscopic data from the MPU9250 chip
         """
@@ -191,7 +191,7 @@ class Sensors:
         except OSError:
             return (-999, -999, -999)
 
-    def readMagnet(self):
+    def read_magnet(self):
         """
         Read magnetometer data from the MPU9250 chip
         """
@@ -200,7 +200,7 @@ class Sensors:
         except OSError:
             return (-999, -999, -999)
         
-    def readTemperature(self):
+    def read_temperature(self):
         """
         Reads temperature data from the MS5611 chip
         """
