@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from RadioModule import Module
+from RadioModule import Module, ModuleSingleton
 import json
 from math import atan, pi
 import RPi.GPIO as GPIO
@@ -10,21 +10,23 @@ import queue
 
 class Control:
 
-    def __init__(self,qdmpin,ignitionpin,error):
+    def __init__(self,qdmpin,ignitionpin,stablizationpin,error):
         self.radio = Module.get_instance(self)
         
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
+        self.stablizationpin = stablizationpin
         
         GPIO.setmode(GPIO.BCM)
         
         GPIO.setup(qdmpin,GPIO.OUT)
         GPIO.setup(ignitionpin,GPIO.OUT)
-        
+        GPIO.setup(stablizationpin,GPIO.OUT)
+
         self.error = error
         
         self.balloon = None
-        self.rocket = None
+        #self.rocket = None
         
         self.commands = queue.Queue(maxsize = 10)
         
@@ -49,7 +51,7 @@ class Control:
         return 0
 
 
-    def Ignition(self, mode):
+    def Ignition(self, mode,manager):
         '''
         This checks condition and starts ignition
         Parameters: - mode: test mode or pre-launch mode
@@ -63,7 +65,7 @@ class Control:
         '''
         
         
-        
+        self.readdata(manager)
         Launch = self.LaunchCondition()
         if Launch:
             if (mode == 1):
@@ -85,7 +87,7 @@ class Control:
         return 0
 
 
-    def readdata(self, rocket,balloon):
+    def readdata(self, manager):
 
         '''
         This reads the data from sensors and check whether they are within range of 5%
@@ -96,7 +98,7 @@ class Control:
         return result - condition within range or not
         '''
         
-        
+        '''
             
         ROCKET_LONG = rocket['GPS']['long']
         ROCKET_LATI = rocket['GPS']['lat']
@@ -119,6 +121,8 @@ class Control:
         ROCKET_ACC_Z = rocket['acc']['z']
 
         self.rocket = [ROCKET_ALT,ROCKET_LONG,ROCKET_LATI,ROCKET_GYRO_X,ROCKET_GYRO_Y,ROCKET_GYRO_Z,ROCKET_MAGNET_X,ROCKET_MAGNET_Y,ROCKET_MAGNET_Z,ROCKET_TEMP,ROCKET_ACC_X,ROCKET_ACC_Y,ROCKET_ACC_Z]
+        '''        
+        balloon = manager[0]
 
         BAL_LONG = balloon['GPS']['long']
         BAL_LATI = balloon['GPS']['lat']
@@ -141,22 +145,24 @@ class Control:
 
 
         self.balloon = [BAL_ALT,BAL_LONG,BAL_LATI,BAL_GYRO_X,BAL_GYRO_Y,BAL_GYRO_Z,BAL_MAGNET_X,BAL_MAGNET_Y,BAL_MAGNET_Z,BAL_TEMP,BAL_ACC_X,BAL_ACC_Y,BAL_ACC_Z]
+        #self.balloon = balloon
 
+    '''
     def dataerrorcheck(self):
         result = False
-        
         for i in range (0,12,1):
-            rangecheck = abs(self.rocket[i]-self.balloon[i]) / self.rocket[i]
-            
+            rangecheck = abs(self.rocket[i]-self.balloon[i]) / self.rocket[i] 
+
             if (rangecheck > self.error):
                 result = False
                 break
             else:
                 result = True
+
         
         return result
 
-
+    '''
 
     def LaunchCondition(self):
         '''
@@ -178,11 +184,22 @@ class Control:
 
     def ConnectionCheck(self):
 
-        connected = os.path.isfile('./receive/[groundstation].json')
+        connected = self.radio
             
         return connected
 
-    def receivedata(self):
-        self.commands.put(json.loads(self.radio.receive()))
+    def receivedata(self)
+        if self.radio is not None:
+            self.commands.put(json.loads(self.radio.queue.get()))
         if not self.commands.empty():
             return self.commands.get()
+
+    def Stablization(self,manager):
+        #need to check if we have a data to read??
+        self.readdata(manager)
+        condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
+        if (condition):
+            GPIO.output(self.stablizationpin,True)
+        else:
+            print('Altitude Off Range')
+

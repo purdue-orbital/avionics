@@ -94,12 +94,13 @@ class mpu9250(object):
 		self.write(MPU9250_ADDRESS, INT_ENABLE, 0x01)
 		sleep(0.1)
 
-		ret = self.read8(AK8963_ADDRESS, AK_WHO_AM_I)
+		'''ret = self.read8(AK8963_ADDRESS, AK_WHO_AM_I)
 		if ret is not AK_DEVICE_ID:
 			raise Exception('AK8963: init failed to find device')
 		self.write(AK8963_ADDRESS, AK8963_CNTL1, (AK8963_16BIT | AK8963_8HZ))
 
-		# all 3 are set to 16b or 14b readings, we have take half, so one bit is
+		'''
+                # all 3 are set to 16b or 14b readings, we have take half, so one bit is
 		# removed 16 -> 15 or 13 -> 14
 		self.alsb = 2 / 2**15
 		self.glsb = 250 / 2**15
