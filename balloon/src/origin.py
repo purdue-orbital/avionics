@@ -13,12 +13,12 @@ def dataProc(d):
     """
 
     print("Running data_aggr.py ...\n")
-    sens = Sensors("MPU9250")
+    sens = Sensors("Balloon Computer")
 
     while True:
-        sens.readAll()  # send every data point to radio/command? Bad idea
+        sens.read_all()  # send every data point to radio/command? Bad idea
         sens.send()
-        sens.passTo(d)
+        sens.pass_to(d)
 
 
 def commProc(d):

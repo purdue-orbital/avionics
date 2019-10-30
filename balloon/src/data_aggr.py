@@ -30,7 +30,7 @@ class Sensors:
             clock_pin  : GPIO pin the SQW line from the DS3231 is connected to
         """
 
-        print("Initializing {}...".format(name))
+        print("Initializing {} sensors...".format(name))
         self.name = name
         self.json = {
                       "origin": "balloon",
@@ -64,7 +64,7 @@ class Sensors:
         self.c = Comm.get_instance()
         self.clock = DS3231(clock_pin)                        # Create DS3231 Object from ds32.py
         self.imu = mpu9250(mpu_address=imu_address)           # Create mpu9250 Object from mpu9.py
-        self.gps = serial.Serial(gps_port, 9600, timeout=0.5) # Create Serial Object for the NEO 7M GPS
+        self.neo = serial.Serial(gps_port, 9600, timeout=0.5) # Create Serial Object for the NEO 7M GPS
 
         self.last = (0, 'N', 0, 'E', 0)
         
@@ -78,17 +78,16 @@ class Sensors:
 
         print("Initialization complete.\n")
 
-    def readAll(self):
+    def read_all(self):
         """
         Reads from sensors and writes to log file
         """
 
-        gx, gy, gz = self.readGyro()    # works, but negative numbers overflow to 250 dps
-        mx, my, mz = self.readMagnet()  # gets data, but is garbage
-        self.readGPS()                  # works, with occasional SerialException: device reports readiness to read
-        lat, _, lon, _, alt = self.last
-        ax, ay, az = self.readAccel()   # works (uncalibrated)
-        temp = self.readTemperature()   # works (uncalibrated)
+        gx, gy, gz = self.gyro    # works, but negative numbers overflow to 250 dps
+        mx, my, mz = self.magnet  # gets data, but is garbage
+        lat, _, lon, _, alt = self.gps  # works, with occasional SerialException: device reports readiness to read
+        ax, ay, az = self.accel   # works (uncalibrated)
+        temp = self.temperature   # works (uncalibrated)
         t = self.clock.time
 
         # Write to .log file
@@ -111,7 +110,7 @@ class Sensors:
         self.json["Accelerometer"]["y"] = ay
         self.json["Accelerometer"]["z"] = az
 
-    def passTo(self, manager):
+    def pass_to(self, manager):
         """
         Writes most recent data to a shared dictionary w/ command thread
 
@@ -158,7 +157,7 @@ class Sensors:
             "{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
                 t, alt, lat, lon, ax, ay, az, gx, gy, gz, mx, my, mz, temp))
 
-    def speedTest(self, dur):
+    def speed_test(self, dur):
         """
         Tests the speed of data acquisition from sensors for a given time.
 
@@ -173,63 +172,95 @@ class Sensors:
             i = i + 1
         print("\nPolling rate: {} Hz\n".format(i / dur))
 
-    def readAccel(self):
+    @property
+    def accel(self):
         """
         Reads acceleration from the MPU9250 chip
         """
         try:
-            return self.imu.accel
+            self.accel = self.imu.accel
         except OSError:
-            return (-999, -999, -999)
-        
-    def readGyro(self):
+            self.accel = (-999, -999, -999)
+        return self._accel
+
+    @accel.setter
+    def accel(self, values):
+        self._accel = values
+            
+    @property
+    def gyro(self):
         """
         Reads gyroscopic data from the MPU9250 chip
         """
         try:
-            return self.imu.gyro
+            self.gyro = self.imu.gyro
         except OSError:
-            return (-999, -999, -999)
-
-    def readMagnet(self):
+            self.gyro = (-999, -999, -999)
+        return self._gyro
+    
+    @gyro.setter
+    def gyro(self, values):
+        self._gyro = values
+        
+    @property
+    def magnet(self):
         """
         Read magnetometer data from the MPU9250 chip
         """
         try:
-            return self.imu.mag
+            self.magnet = self.imu.mag
         except OSError:
-            return (-999, -999, -999)
-        
-    def readTemperature(self):
+            self.magnet = (-999, -999, -999)
+        return self._magnet
+
+    @magnet.setter
+    def magnet(self, values):
+        self._magnet = values
+
+    @property
+    def temperature(self):
         """
         Reads temperature data from the MS5611 chip
         """
         try:
-            return self.imu.temp
+            self.temperature = self.imu.temp
         except OSError:
-            return -999
+            self.temperature = -999
+        return self._temperature
 
-    def readGPS(self, printing=False):
+    @temperature.setter
+    def temperature(self, value):
+        self._temperature = value
+
+    @property
+    def gps(self):
         """
         Reads GPS data from the NEO7M chip
         """
-        string = self.gps.readline().decode('utf-8')
+        string = self.neo.readline().decode('utf-8')
         
         if (string.find('GGA') > 0):
             msg = pynmea2.parse(string)
 
-            if printing:
-                print("Timestamp: %s -- Lat: %s %s -- Lon: %s %s -- Altitude: %s %s" % (msg.timestamp,msg.lat,msg.lat_dir,msg.lon,msg.lon_dir,msg.altitude,msg.altitude_units))
+            # Uncomment to print
+            # if False:
+            #     print("Timestamp: %s -- Lat: %s %s -- Lon: %s %s -- Altitude: %s %s" % (msg.timestamp,msg.lat,msg.lat_dir,msg.lon,msg.lon_dir,msg.altitude,msg.altitude_units))
 
             if msg.lat != '':
-                self.last = (msg.lat, msg.lat_dir, msg.lon, msg.lon_dir, msg.altitude)
+                self.gps = (msg.lat, msg.lat_dir, msg.lon, msg.lon_dir, msg.altitude)
             else:
-                self.last = (-999, 'ERR', -999, 'ERR', -999)
+                self.gps = (-999, 'ERR', -999, 'ERR', -999)
+            return self._gps
+
+    @gps.setter
+    def gps(self, values):
+        self._gps = values
+
 
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
     sens = Sensors("MPU9250")
 
     while True:
-        sens.readAll()
+        sens.read_all()
         sens.printd()

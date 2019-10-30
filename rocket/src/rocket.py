@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 from mpu9 import mpu9250
 from ds32 import DS3231
 
-class Sensors():
+class Sensors:
     """
     Object-oriented approach to creating sensor functionality for
     IMU, GPS, RTC, and radio
@@ -29,28 +29,6 @@ class Sensors():
 
         print("Initializing {}...".format(name))
         self.name = name
-        self.json = {"Altitude": 0,   # Initialize dictionary structure
-        "GPS": {
-            "longitude": 0,
-            "latitude": 0
-            },
-        "Gyroscope": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-            },
-        "Magnetometer": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-            },
-        "Temperature": 0,
-        "Accelerometer": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-            }
-        }
 
         # Open log file and write header
         self.log = open('../logs/data.log', 'a+')
@@ -64,62 +42,28 @@ class Sensors():
                         
         print("Initialization complete.\n")
 
-    def readAll(self):
+        
+    def read_all(self, printing=False):
         """
         Reads from sensors and writes to log file
         """
 
-        gx, gy, gz = self.readGyro()    # works, but negative numbers overflow to 250 dps
-        mx, my, mz = self.readMagnet()  # gets data, but is garbage
-        self.readGPS()                  # works, with occasional SerialException: device reports readiness to read
+        gx, gy, gz = self.read_gyro()    # works, but negative numbers overflow to 250 dps
+        mx, my, mz = self.read_magnet()  # gets data, but is garbage
+        self.read_GPS()                  # works, with occasional SerialException: device reports readiness to read
         lat, _, lon, _, alt = self.last
-        ax, ay, az = self.readAccel()   # works (uncalibrated)
-        temp = self.readTemperature()   # works (uncalibrated)
+        ax, ay, az = self.read_accel()   # works (uncalibrated)
+        temp = self.read_temperature()   # works (uncalibrated)
         t = self.clock.time
             
         # Write to .log file
         self.log.write("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
-        
-        # Assigning each value in given list to dict entry
-        self.json["Altitude"] = alt
-        self.json["GPS"]["longitude"] = lon
-        self.json["GPS"]["latitude"] = lat
-        self.json["Gyroscope"]["x"] = gx
-        self.json["Gyroscope"]["y"] = gy
-        self.json["Gyroscope"]["z"] = gz
-        self.json["Magnetometer"]["x"] = mx
-        self.json["Magnetometer"]["y"] = my
-        self.json["Magnetometer"]["z"] = mz
-        self.json["Temperature"] = temp
-        self.json["Accelerometer"]["x"] = ax
-        self.json["Accelerometer"]["y"] = ay
-        self.json["Accelerometer"]["z"] = az
 
-        
-    def printd(self):
-        """
-        Prints most recent data collected for debugging
-        """
+        if printing:
+            print("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
 
-        alt = self.json["Altitude"]
-        lon = self.json["GPS"]["longitude"]
-        lat = self.json["GPS"]["latitude"]
-        gx = self.json["Gyroscope"]["x"]
-        gy = self.json["Gyroscope"]["y"]
-        gz = self.json["Gyroscope"]["z"]
-        mx = self.json["Magnetometer"]["x"]
-        my = self.json["Magnetometer"]["y"]
-        mz = self.json["Magnetometer"]["z"]
-        temp = self.json["Temperature"]
-        ax = self.json["Accelerometer"]["x"]
-        ay = self.json["Accelerometer"]["y"]
-        az = self.json["Accelerometer"]["z"]
-        t = self.clock.time
-        
-        print("{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(t,alt,lat,lon,ax,ay,az,gx,gy,gz,mx,my,mz,temp))
-
-        
-    def speedTest(self, dur):
+            
+    def speed_test(self, dur):
         """
         Tests the speed of data acquisition from sensors for a given time.
 
@@ -134,7 +78,7 @@ class Sensors():
         print("\nPolling rate: {} Hz\n".format(i / dur))
 
         
-    def readAccel(self):
+    def read_accel(self):
         """
         Reads acceleration from the MPU9250 chip
         """
@@ -144,7 +88,7 @@ class Sensors():
             return (-999, -999, -999)
 
         
-    def readGyro(self):
+    def read_gyro(self):
         """
         Reads gyroscopic data from the MPU9250 chip
         """
@@ -154,7 +98,7 @@ class Sensors():
             return (-999, -999, -999)
 
         
-    def readMagnet(self):
+    def read_magnet(self):
         """
         Read magnetometer data from the MPU9250 chip
         """
@@ -164,7 +108,7 @@ class Sensors():
             return (-999, -999, -999)
 
         
-    def readTemperature(self):
+    def read_temperature(self):
         """
         Reads temperature data from the MS5611 chip
         """
@@ -174,7 +118,7 @@ class Sensors():
             return -999
 
         
-    def readGPS(self, printing=False):
+    def read_GPS(self, printing=False):
         """
         Reads GPS data from the NEO7M chip
         """
@@ -195,8 +139,7 @@ class Sensors():
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
     
-    sens = Sensors("MPU9250")
+    sens = Sensors("Rocket Computer")
 
     while True:
-        sens.readAll()
-        sens.printd()
+        sens.read_all()
