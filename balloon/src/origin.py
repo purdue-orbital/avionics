@@ -31,7 +31,7 @@ def commProc(d):
     
     print("Running comm_parse.py ...\n")
 
-    ctrl = Control(5,6,0.05)#NEED CHANGE IN PARAMETER (NEW PARAMETER OF STABLIZATION PIN AFTER IGNITION PIN(#2 PARAMETER))
+    ctrl = Control(5,6,13,0.05)#pin number 13 = stabilization pin
 
     mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
 
@@ -43,7 +43,7 @@ def commProc(d):
         ctrl.QDMCheck(0)
     else:
         while not ctrl.commands.empty():
-            GSDATA = json.loads(ctrl.receivedata())
+            GSDATA = json.loads(ctrl.commands.get())
     
             '''
             QDM = GSDATA['QDM']
@@ -57,9 +57,9 @@ def commProc(d):
             CType = GSDATA['command']
             if (CType == 'QDM'):
                 ctrl.QDMCheck(0)
-            if (CType == 'stablize'):
-                ctrl.Stablization(d)
-            if (CType == 'ignition'):
+            if (CType == 'Stabilize'):
+                ctrl.Stabilization(d)
+            if (CType == 'Ignition'):
                 ctrl.Ignition(mode,d)
 
         ## NEED CHANGES ###

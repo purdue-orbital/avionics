@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from RadioModule import Module, ModuleSingleton
+from RadioModule import Module
 import json
 from math import atan, pi
 import RPi.GPIO as GPIO
@@ -7,27 +7,40 @@ import time
 from array import *
 import os
 import queue
+from CommunicationsDriver import Comm
 
 class Control:
 
-    def __init__(self,qdmpin,ignitionpin,stablizationpin,error):
+
+    @staticmethod
+    def generate_status_json(self):
+        json = {}
+        json["origin"] = "status"
+        json["QDM"] = 0
+        json["Ignition"] = 0
+        json["Stabilization"] = 0
+        return json
+
+    def __init__(self,qdmpin,ignitionpin,stabilizationpin,error):
         self.radio = Module.get_instance(self)
         
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
-        self.stablizationpin = stablizationpin
+        self.stabilizationpin = stabilizationpin
         
         GPIO.setmode(GPIO.BCM)
         
         GPIO.setup(qdmpin,GPIO.OUT)
         GPIO.setup(ignitionpin,GPIO.OUT)
-        GPIO.setup(stablizationpin,GPIO.OUT)
+        GPIO.setup(stabilizationpin,GPIO.OUT)
 
         self.error = error
         
         self.balloon = None
         #self.rocket = None
-        
+
+        self.c = self.Comm.get_instance()
+
         self.commands = queue.Queue(maxsize = 10)
         
         
@@ -46,8 +59,14 @@ class Control:
             GPIO.output(self.qdmpin,True)
         else:
             GPIO.output(self.qdmpin,False)
-            self.radio.send(json.dumps({"QDM":"Activated"}))
-        
+
+
+            data = self.generate_status_json()
+            data["QDM"] = 1
+            self.c.send(data, "status")
+            #self.radio.send(json.dumps({"QDM":"Activated"}))
+            
+
         return 0
 
 
@@ -71,14 +90,20 @@ class Control:
             if (mode == 1):
                 #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
-                self.radio.send(json.dumps({"Ignition":"Activated"}))
+                data = self.generate_status_json(self)
+                data["Ignition"] = 1
+                self.c.send(data, "status")
+                #self.radio.send(json.dumps({"Ignition":"Activated"}))
                 time.sleep(0.1)
                 #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
             elif (mode == 2):
                 #class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
-                self.radio.send(json.dumps({"Ignition":"Activated"}))
+                data = self.generate_status_json(self)
+                data["Ignition"] = 1
+                self.c.send(data,"status")
+                #self.radio.send(json.dumps({"Ignition":"Activated"}))
                 time.sleep(10)
                 #class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
@@ -184,22 +209,28 @@ class Control:
 
     def ConnectionCheck(self):
 
-        connected = self.radio
+        connected = self.radio.remote_device
             
         return connected
 
     def receivedata(self)
-        if self.radio is not None:
-            self.commands.put(json.loads(self.radio.queue.get()))
-        if not self.commands.empty():
-            return self.commands.get()
+        #if self.radio is not None:
+        self.commands.put(json.loads(self.radio.queue.get()))
 
-    def Stablization(self,manager):
-        #need to check if we have a data to read??
-        self.readdata(manager)
-        condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
+    def Stabilization(self,manager):
+        #self.readdata(manager)
+        #condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
+        '''
         if (condition):
-            GPIO.output(self.stablizationpin,True)
+            GPIO.output(self.stabilizationpin,True)
+            data = self.generate_status_json(self)
+            data["Stabilization"] = 1
+            self.c.send(data,"status")
         else:
-            print('Altitude Off Range')
+        '''
+
+        GPIO.output(self.stabilizationpin,True)
+        data - self.generate_status_json(self)
+        data["Stabilization"] = 1
+        self.c.send(data,"status")
 
