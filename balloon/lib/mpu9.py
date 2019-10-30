@@ -1,18 +1,5 @@
-from __future__ import print_function
-from __future__ import division
-
-try:
-    import smbus as smbus
-except ImportError:
-    print('WARNING: Using fake hardware')
-    from .fakeHW import smbus
-    # from fake_rpi import smbus
-
 from time import sleep
 import struct
-
-# Todo:
-# - replace all read* with the block read?
 
 ################################
 # MPU9250
@@ -56,8 +43,8 @@ AK8963_ASAX  = 0x10
 AK8963_ST1   = 0x02
 
 
-class mpu9250(object):
-    def __init__(self, mpu_address=0x69, bus=1):
+class mpu9250(I2CDevice):
+    def __init__(self, name, mpu_address=0x69):
         """
         Setup the IMU
 
@@ -74,29 +61,26 @@ class mpu9250(object):
                         GYRO_CONFIG: AK8963_14BIT | AK8963_100HZ
                 }
         """
-        global MPU9250_ADDRESS
-        MPU9250_ADDRESS = mpu_address
-        self.bus = smbus.SMBus(bus)
+        super().init(self, mpu_address, "MPU9250")
 
         # let's double check we have the correct device address
-        ret = self.read8(MPU9250_ADDRESS, WHO_AM_I)
-        if ret is not DEVICE_ID:
+        if self.read(WHO_AM_I is not DEVICE_ID:
             raise Exception('MPU9250: init failed to find device')
 
-        self.write(MPU9250_ADDRESS, PWR_MGMT_1, 0x00)  # turn sleep mode off
+        self.write(PWR_MGMT_1, 0x00)  # turn sleep mode off
         sleep(0.2)
-        self.bus.write_byte_data(MPU9250_ADDRESS, PWR_MGMT_1, 0x01)  # auto select clock source
-        self.write(MPU9250_ADDRESS, ACCEL_CONFIG, ACCEL_2G)
-        self.write(MPU9250_ADDRESS, GYRO_CONFIG, GYRO_250DPS)
+        self.write(PWR_MGMT_1, 0x01)  # auto select clock source
+        self.write(ACCEL_CONFIG, ACCEL_2G)
+        self.write(GYRO_CONFIG, GYRO_250DPS)
 
         # You have to enable the other chips to join the I2C network
         # then you should see 0x68 and 0x0c from:
         # sudo i2cdetect -y 1
-        self.write(MPU9250_ADDRESS, INT_PIN_CFG, 0x22)
-        self.write(MPU9250_ADDRESS, INT_ENABLE, 0x01)
+        self.write(INT_PIN_CFG, 0x22)
+        self.write(INT_ENABLE, 0x01)
         sleep(0.1)
 
-        ret = self.read8(AK8963_ADDRESS, AK_WHO_AM_I)
+        ret = self.read(AK8963_ADDRESS, AK_WHO_AM_I)
         if ret is not AK_DEVICE_ID:
             raise Exception('AK8963: init failed to find device')
         self.write(AK8963_ADDRESS, AK8963_CNTL1, (AK8963_16BIT | AK8963_8HZ))
@@ -109,16 +93,6 @@ class mpu9250(object):
 
         # i think i can do this???
         # self.convv = struct.Struct('<hhh')
-
-    def __del__(self):
-        self.bus.close()
-
-    def write(self, address, register, value):
-        self.bus.write_byte_data(address, register, value)
-
-    def read8(self, address, register):
-        data = self.bus.read_byte_data(address, register)
-        return data
 
     def read16(self, address, register):
         data = self.bus.read_i2c_block_data(address, register, 2)
