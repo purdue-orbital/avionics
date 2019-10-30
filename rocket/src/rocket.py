@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # Set rising edge detection on balloon_in_pin
 
     GPIO.setup(balloon_in_pin, GPIO.IN)
-    GPIO.add_event_detect(balloon_in_pin, GPIO.RISING, callback=ballon_disconnect(sens.log))
+    GPIO.add_event_detect(balloon_in_pin, GPIO.RISING, callback=balloon_disconnect(sens.log))
 
     # Start data logging
     print("Running data_aggr.py ...\n")
