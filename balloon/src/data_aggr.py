@@ -62,7 +62,7 @@ class Sensors:
             'm_z (mT),temp (C)\n')
 
         self.c = Comm.get_instance()
-        self.clock = DS3231(clock_pin)                        # Create DS3231 Object from ds32.py
+        self.clock = DS3231("DS3231", clock_pin)              # Create DS3231 Object from ds32.py
         self.imu = mpu9250(mpu_address=imu_address)           # Create mpu9250 Object from mpu9.py
         self.neo = serial.Serial(gps_port, 9600, timeout=0.5) # Create Serial Object for the NEO 7M GPS
 
@@ -259,7 +259,7 @@ class Sensors:
 
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
-    sens = Sensors("MPU9250")
+    sens = Sensors("Balloon Computer")
 
     while True:
         sens.read_all()
