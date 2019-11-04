@@ -1,19 +1,21 @@
-from datetime import datetime, timedelta
-from RadioModule import Module
+import sys, os
+import time
 import json
+import queue
 from math import atan, pi
 import RPi.GPIO as GPIO
-import time
 from array import *
-import os
-import queue
+
+sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
+
+from RadioModule import Module
 from CommunicationsDriver import Comm
 
 
 class Control:
 
     @staticmethod
-    def generate_status_json(self):
+    def generate_status_json():
         json = {}
         json["origin"] = "status"
         json["QDM"] = 0
@@ -22,7 +24,6 @@ class Control:
         return json
 
     def __init__(self,qdmpin,ignitionpin,error):
-        self.radio = Module.get_instance(self)
         
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
@@ -37,7 +38,7 @@ class Control:
         self.balloon = None
         self.rocket = None
 
-        self.c = self.Comm.get_instance()
+        self.c = Comm.get_instance()
         
         self.commands = queue.Queue(maxsize=10)
 
@@ -104,7 +105,7 @@ class Control:
 
         return 0
 
-    def readdata(self, rocket,balloon):
+    def readdata(self, balloon):
 
         '''
         This reads the data from sensors and check whether they are within range of 5%
@@ -114,65 +115,26 @@ class Control:
         
         return result - condition within range or not
         '''
+        lon = balloon['GPS']['long']
+        lat = balloon['GPS']['lat']
+
+        alt = balloon['alt']
+
+        gx = balloon['gyro']['x']
+        gy = balloon['gyro']['y']
+        gz = balloon['gyro']['z']
         
-        
-            
-        ROCKET_LONG = rocket['GPS']['long']
-        ROCKET_LATI = rocket['GPS']['lat']
+        mx = balloon['mag']['x']
+        my = balloon['mag']['y']
+        mz = balloon['mag']['z']
 
-        ROCKET_ALT = rocket['alt']
+        temp = balloon['temp']
 
-        ROCKET_GYRO_X = rocket['gyro']['x']
-        ROCKET_GYRO_Y = rocket['gyro']['y']
-        ROCKET_GYRO_Z = rocket['gyro']['z']
+        ax = balloon['acc']['x']
+        ay = balloon['acc']['y']
+        az = balloon['acc']['z']
 
-
-        ROCKET_MAGNET_X = rocket['mag']['x']
-        ROCKET_MAGNET_Y = rocket['mag']['y']
-        ROCKET_MAGNET_Z = rocket['mag']['z']
-        
-        ROCKET_TEMP = rocket['temp']
-
-        ROCKET_ACC_X = rocket['acc']['x']
-        ROCKET_ACC_Y = rocket['acc']['y']
-        ROCKET_ACC_Z = rocket['acc']['z']
-
-        self.rocket = [ROCKET_ALT, ROCKET_LONG, ROCKET_LATI, ROCKET_GYRO_X, ROCKET_GYRO_Y, ROCKET_GYRO_Z, ROCKET_MAGNET_X, ROCKET_MAGNET_Y, ROCKET_MAGNET_Z, ROCKET_TEMP, ROCKET_ACC_X, ROCKET_ACC_Y, ROCKET_ACC_Z]
-
-        BAL_LONG = balloon['GPS']['long']
-        BAL_LATI = balloon['GPS']['lat']
-
-        BAL_ALT = balloon['alt']
-
-        BAL_GYRO_X = balloon['gyro']['x']
-        BAL_GYRO_Y = balloon['gyro']['y']
-        BAL_GYRO_Z = balloon['gyro']['z']
-        
-        BAL_MAGNET_X = balloon['mag']['x']
-        BAL_MAGNET_Y = balloon['mag']['y']
-        BAL_MAGNET_Z = balloon['mag']['z']
-
-        BAL_TEMP = balloon['temp']
-
-        BAL_ACC_X = balloon['acc']['x']
-        BAL_ACC_Y = balloon['acc']['y']
-        BAL_ACC_Z = balloon['acc']['z']
-
-        self.balloon = [BAL_ALT, BAL_LONG, BAL_LATI, BAL_GYRO_X, BAL_GYRO_Y, BAL_GYRO_Z, BAL_MAGNET_X, BAL_MAGNET_Y, BAL_MAGNET_Z, BAL_TEMP, BAL_ACC_X, BAL_ACC_Y, BAL_ACC_Z]
-
-    def dataerrorcheck(self):
-        result = False
-        
-        for i in range (0, 12, 1):
-            rangecheck = abs(self.rocket[i]-self.balloon[i]) / self.rocket[i]
-            
-            if rangecheck > self.error:
-                result = False
-                break
-            else:
-                result = True
-        
-        return result
+        self.balloon = [alt, lon, lat, gx, gy, gz, mx, my, mz, temp, ax, ay, az]
 
     def LaunchCondition(self):
         '''
@@ -182,7 +144,6 @@ class Control:
 
         '''
         
-        
         altitude = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
         spinrate = (self.balloon[3]<=5) & (self.balloon[4]<=5) & (self.balloon[5]<=5)
         degree = atan(self.balloon[7]/self.balloon[6]) * 180/pi
@@ -191,12 +152,9 @@ class Control:
         return (altitude & spinrate & direction)
 
     def ConnectionCheck(self):
-
-        connected = os.path.isfile('./receive/[groundstation].json')
-            
-        return connected
+        return os.path.isfile('./receive/[groundstation].json')
 
     def receivedata(self):
-        self.commands.put(json.loads(self.radio.receive()))
+        self.commands.put(json.loads(self.c.receive()))
         if not self.commands.empty():
             return self.commands.get()
