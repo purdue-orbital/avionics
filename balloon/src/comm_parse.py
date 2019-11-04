@@ -42,7 +42,7 @@ class Control:
         
         self.commands = queue.Queue(maxsize=10)
 
-    def QDMCheck(self, QDM):
+    def qdm_check(self, QDM):
         '''
         This checks if we need to QDM.
         Parameter: QDM
@@ -65,7 +65,7 @@ class Control:
         
         return 0
 
-    def Ignition(self, mode):
+    def ignition(self, mode):
         '''
         This checks condition and starts ignition
         Parameters: - mode: test mode or pre-launch mode
@@ -80,15 +80,14 @@ class Control:
         
         
         
-        Launch = self.LaunchCondition()
-        if Launch:
+        launch = self.launch_condition()
+        if launch:
             if (mode == 1):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
                 data = self.generate_status_json(self)
                 data["Ignition"] = 1
                 self.c.send(data, "status")
-                # self.radio.send(json.dumps({"Ignition": "Activated"}))
                 time.sleep(0.1)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
@@ -98,14 +97,13 @@ class Control:
                 data = self.generate_status_json(self)
                 data["Ignition"] = 1
                 self.c.send(data, "status")
-                # self.radio.send(json.dumps({"Ignition": "Activated"}))
                 time.sleep(10)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
 
         return 0
 
-    def readdata(self, balloon):
+    def read_data(self, balloon):
 
         '''
         This reads the data from sensors and check whether they are within range of 5%
@@ -136,7 +134,7 @@ class Control:
 
         self.balloon = [alt, lon, lat, gx, gy, gz, mx, my, mz, temp, ax, ay, az]
 
-    def LaunchCondition(self):
+    def launch_condition(self):
         '''
         This check Launch condition
         
@@ -151,10 +149,10 @@ class Control:
             
         return (altitude & spinrate & direction)
 
-    def ConnectionCheck(self):
+    def connection_check(self):
         return os.path.isfile('./receive/[groundstation].json')
 
-    def receivedata(self):
+    def receive_data(self):
         self.commands.put(json.loads(self.c.receive()))
         if not self.commands.empty():
             return self.commands.get()
