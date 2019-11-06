@@ -23,16 +23,19 @@ class Control:
         json["Stabilization"] = 0
         return json
 
-    def __init__(self,qdmpin,ignitionpin,error):
-        
+    def __init__(self,qdmpin,ignitionpin,rocketlogpin,error):
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
-        
+		self.rocketlogpin = rocketlogpin	#value needs to be set in origin.py
+ 
         GPIO.setmode(GPIO.BCM)
         
         GPIO.setup(qdmpin,GPIO.OUT)
         GPIO.setup(ignitionpin,GPIO.OUT)
+		GPIO.setup(rocketlogpin,GPIO.OUT)
         
+		GPIO.output(rocketlogpin,True) #on init, set a true signal to prevent logging
+
         self.error = error
         
         self.balloon = None
@@ -91,6 +94,7 @@ class Control:
                 time.sleep(0.1)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
+				GPIO.output(self.rocketlogpin,False) #send false signal to initiate logging
             elif (mode == 2):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
@@ -100,6 +104,7 @@ class Control:
                 time.sleep(10)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.ignitionpin,False)
+				GPIO.output(self.rocketlogpin,False) #send false signal to initiate logging
 
         return 0
 
