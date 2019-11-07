@@ -178,20 +178,12 @@ class Control:
         #if self.radio is not None:
         self.commands.put(json.loads(self.radio.queue.get()))
 
-    def Stabilization(self):
-        #self.readdata(manager)
-        #condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
-        '''
+    def Stabilization(self,manager):
+        self.readdata(manager)
+        condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
         if (condition):
             GPIO.output(self.stabilizationpin,True)
             data = self.generate_status_json(self)
             data["Stabilization"] = 1
             self.c.send(data,"status")
-        else:
-        '''
-
-        GPIO.output(self.stabilizationpin,True)
-        data - self.generate_status_json(self)
-        data["Stabilization"] = 1
-        self.c.send(data,"status")
 

@@ -59,7 +59,7 @@ def commProc(d):
             if (CType == 'QDM'):
                 ctrl.QDMCheck(0)
             if (CType == 'Stabilize'):
-                ctrl.Stabilization()
+                ctrl.Stabilization(d)
             if (CType == 'Ignition'):
                 ctrl.Ignition(mode,d)
 
