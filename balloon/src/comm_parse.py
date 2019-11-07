@@ -1,12 +1,14 @@
-from datetime import datetime, timedelta
-from RadioModule import Module
+import sys, os
+import time
 import json
+import queue
 from math import atan, pi
 import RPi.GPIO as GPIO
-import time
 from array import *
-import os
-import queue
+
+sys.path.append(os.path.abspath(os.path.join('..'. 'lib')))
+
+from RadioModule import Module
 from CommunicationsDriver import Comm
 
 class Control:
@@ -120,74 +122,33 @@ class Control:
         
         compare condition of rocket and ballon and check if their difference has percent error less than 5 %
         
-        return result - condition within range or not
-        '''
-        
+        return none
         '''
             
-        ROCKET_LONG = rocket['GPS']['long']
-        ROCKET_LATI = rocket['GPS']['lat']
-
-        ROCKET_ALT = rocket['alt']
-
-        ROCKET_GYRO_X = rocket['gyro']['x']
-        ROCKET_GYRO_Y = rocket['gyro']['y']
-        ROCKET_GYRO_Z = rocket['gyro']['z']
-
-
-        ROCKET_MAGNET_X = rocket['mag']['x']
-        ROCKET_MAGNET_Y = rocket['mag']['y']
-        ROCKET_MAGNET_Z = rocket['mag']['z']
-        
-        ROCKET_TEMP = rocket['temp']
-
-        ROCKET_ACC_X = rocket['acc']['x']
-        ROCKET_ACC_Y = rocket['acc']['y']
-        ROCKET_ACC_Z = rocket['acc']['z']
-
-        self.rocket = [ROCKET_ALT,ROCKET_LONG,ROCKET_LATI,ROCKET_GYRO_X,ROCKET_GYRO_Y,ROCKET_GYRO_Z,ROCKET_MAGNET_X,ROCKET_MAGNET_Y,ROCKET_MAGNET_Z,ROCKET_TEMP,ROCKET_ACC_X,ROCKET_ACC_Y,ROCKET_ACC_Z]
-        '''        
         balloon = manager[0]
 
-        BAL_LONG = balloon['GPS']['long']
-        BAL_LATI = balloon['GPS']['lat']
+        lon = balloon['GPS']['long']
+        lat = balloon['GPS']['lat']
 
-        BAL_ALT = balloon['alt']
+        alt = balloon['alt']
 
-        BAL_GYRO_X = balloon['gyro']['x']
-        BAL_GYRO_Y = balloon['gyro']['y']
-        BAL_GYRO_Z = balloon['gyro']['z']
+        gx = balloon['gyro']['x']
+        gy = balloon['gyro']['y']
+        gz = balloon['gyro']['z']
         
-        BAL_MAGNET_X = balloon['mag']['x']
-        BAL_MAGNET_Y = balloon['mag']['y']
-        BAL_MAGNET_Z = balloon['mag']['z']
+        mx = balloon['mag']['x']
+        my = balloon['mag']['y']
+        mz = balloon['mag']['z']
 
-        BAL_TEMP = balloon['temp']
+        temp = balloon['temp']
 
-        BAL_ACC_X = balloon['acc']['x']
-        BAL_ACC_Y = balloon['acc']['y']
-        BAL_ACC_Z = balloon['acc']['z']
+        ax = balloon['acc']['x']
+        ay = balloon['acc']['y']
+        az = balloon['acc']['z']
 
 
-        self.balloon = [BAL_ALT,BAL_LONG,BAL_LATI,BAL_GYRO_X,BAL_GYRO_Y,BAL_GYRO_Z,BAL_MAGNET_X,BAL_MAGNET_Y,BAL_MAGNET_Z,BAL_TEMP,BAL_ACC_X,BAL_ACC_Y,BAL_ACC_Z]
-        #self.balloon = balloon
+        self.balloon = [alt, lon, lat, gx, gy, gz, mx, my, mz, temp, ax, ay, az]
 
-    '''
-    def dataerrorcheck(self):
-        result = False
-        for i in range (0,12,1):
-            rangecheck = abs(self.rocket[i]-self.balloon[i]) / self.rocket[i] 
-
-            if (rangecheck > self.error):
-                result = False
-                break
-            else:
-                result = True
-
-        
-        return result
-
-    '''
 
     def LaunchCondition(self):
         '''
@@ -217,7 +178,7 @@ class Control:
         #if self.radio is not None:
         self.commands.put(json.loads(self.radio.queue.get()))
 
-    def Stabilization(self,manager):
+    def Stabilization(self):
         #self.readdata(manager)
         #condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
         '''

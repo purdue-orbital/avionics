@@ -42,8 +42,9 @@ def commProc(d):
     if (result == 0):
         ctrl.QDMCheck(0)
     else:
+        ctrl.receivedata()
         while not ctrl.commands.empty():
-            GSDATA = json.loads(ctrl.commands.get())
+            GSDATA = ctrl.commands.get()
     
             '''
             QDM = GSDATA['QDM']
@@ -58,7 +59,7 @@ def commProc(d):
             if (CType == 'QDM'):
                 ctrl.QDMCheck(0)
             if (CType == 'Stabilize'):
-                ctrl.Stabilization(d)
+                ctrl.Stabilization()
             if (CType == 'Ignition'):
                 ctrl.Ignition(mode,d)
 
