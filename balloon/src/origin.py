@@ -28,8 +28,7 @@ def commProc(d):
     """
 
     print("Running comm_parse.py ...\n")
-	#add 3rd arument for the pin that sends logging signal to rocket computer
-    ctrl = Control(5, 6, 0.05)
+    ctrl = Control(5, 6, rocketlogpin, 0.05) #rocketlogpin currently undefined
 
     result = ctrl.ConnectionCheck()
     endT = datetime.now() + timedelta(seconds=10)
