@@ -26,7 +26,7 @@ class Control:
     def __init__(self,qdmpin,ignitionpin,rocketlogpin,error):
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
-	self.rocketlogpin = rocketlogpin	#value needs to be set in origin.py
+	self.rocketlogpin = rocketlogpin
  
         GPIO.setmode(GPIO.BCM)
         
@@ -34,7 +34,7 @@ class Control:
         GPIO.setup(ignitionpin,GPIO.OUT)
 	GPIO.setup(rocketlogpin,GPIO.OUT)
         
-	GPIO.output(rocketlogpin,True) #on init, set a true signal to prevent logging
+	GPIO.output(rocketlogpin,True)
 
         self.error = error
         
@@ -93,8 +93,8 @@ class Control:
                 self.c.send(data, "status")
                 time.sleep(0.1)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-                GPIO.output(self.ignitionpin,False)
-		GPIO.output(self.rocketlogpin,False) #send false signal to initiate logging
+                GPIO.output(self.rocketlogpin,False)
+		GPIO.output(self.ignitionpin,False)
             elif (mode == 2):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
@@ -103,8 +103,8 @@ class Control:
                 self.c.send(data, "status")
                 time.sleep(10)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-                GPIO.output(self.ignitionpin,False)
-		GPIO.output(self.rocketlogpin,False) #send false signal to initiate logging
+		GPIO.output(self.rocketlogpin,False)
+		GPIO.output(self.ignitionpin,False)
 
         return 0
 
