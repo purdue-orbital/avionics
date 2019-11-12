@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # Log time of balloon disconnect
 
     sens = Sensors("Rocket Computer") 
-    sens.log.write("balloon disconnect @ ")
+    sens.log.write("balloon disconnect @ {:.2f}\n".format(sens.clock.time))
 
     # Start data logging
 
