@@ -23,23 +23,25 @@ class Control:
         json["Stabilization"] = 0
         return json
 
-    def __init__(self,qdmpin,ignitionpin,rocketlogpin,error):
+    def __init__(self,qdmpin,ignitionpin,rocketlogpin,stabilizationpin,error):
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
-	self.rocketlogpin = rocketlogpin
- 
+	      self.rocketlogpin = rocketlogpin
+        self.stabilizationpin = stabilizationpin
+
+        # GPIO SETUP
         GPIO.setmode(GPIO.BCM)
         
         GPIO.setup(qdmpin,GPIO.OUT)
         GPIO.setup(ignitionpin,GPIO.OUT)
-	GPIO.setup(rocketlogpin,GPIO.OUT)
-        
-	GPIO.output(rocketlogpin,True)
+	      GPIO.setup(rocketlogpin,GPIO.OUT)
+	      GPIO.output(rocketlogpin,True)
+        GPIO.setup(stabilizationpin,GPIO.OUT)
 
         self.error = error
         
         self.balloon = None
-        self.rocket = None
+        # self.rocket = None
 
         self.c = Comm.get_instance()
         
@@ -81,8 +83,6 @@ class Control:
         return void
         '''
         
-        
-        
         launch = self.launch_condition()
         if launch:
             if (mode == 1):
@@ -94,7 +94,7 @@ class Control:
                 time.sleep(0.1)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.rocketlogpin,False)
-		GPIO.output(self.ignitionpin,False)
+		            GPIO.output(self.ignitionpin,False)
             elif (mode == 2):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
@@ -103,8 +103,8 @@ class Control:
                 self.c.send(data, "status")
                 time.sleep(10)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-		GPIO.output(self.rocketlogpin,False)
-		GPIO.output(self.ignitionpin,False)
+		            GPIO.output(self.rocketlogpin,False)
+		            GPIO.output(self.ignitionpin,False)
 
         return 0
 
@@ -116,7 +116,7 @@ class Control:
         
         compare condition of rocket and ballon and check if their difference has percent error less than 5 %
         
-        return result - condition within range or not
+        return none
         '''
         lon = balloon['GPS']['long']
         lat = balloon['GPS']['lat']
@@ -155,7 +155,19 @@ class Control:
         return (altitude & spinrate & direction)
 
     def connection_check(self):
-        return os.path.isfile('./receive/[groundstation].json')
+
+        connected = self.radio.remote_device
+            
+        return connected
+
+    def stabilization(self,manager):
+        self.read_data(manager)
+        condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
+        if (condition):
+            GPIO.output(self.stabilizationpin,True)
+            data = self.generate_status_json()
+            data["Stabilization"] = 1
+            self.c.send(data,"status")
 
     def receive_data(self):
         self.commands.put(json.loads(self.c.receive()))
