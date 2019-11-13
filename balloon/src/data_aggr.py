@@ -7,7 +7,7 @@ import threading
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
-from CommunicationsDriver import Comm
+# from CommunicationsDriver import Comm
 from mpu9 import MPU9250
 from ak89 import AK8963
 from ds32 import DS3231
@@ -70,10 +70,7 @@ class Sensors:
         self.imu = MPU9250("MPU9250", mpu_address=imu_address)
         self.ak = AK8963("AK8963")
         self.neo = NEO7M(gps_port, 0.5)
-        
-        self._lock = threading.Lock() # Generate thread lock
-        # Spawn GPS thread as daemon (will terminate at end of script)
-        threading.Thread(target=self.gps_continuous_read, daemon=True)
+        self.gps = (0, 0)
         
         if radio_port is not None:  # Create radio object if desired
             try:
@@ -92,10 +89,11 @@ class Sensors:
 
         gx, gy, gz = self.gyro    # works, but negative numbers overflow to 250 dps
         mx, my, mz = self.magnet  # gets data, but is garbage
-        lat, _, lon, _, alt = self.gps  # works, with occasional SerialException: device reports readiness to read
+        lat, lon = self.gps_position()
         ax, ay, az = self.accel   # works (uncalibrated)
         temp = self.temperature   # works (uncalibrated)
         t = self.clock.time
+        alt = 0
 
         # Write to .log file
         self.log.write(
@@ -163,18 +161,11 @@ class Sensors:
             "{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
                 t, alt, lat, lon, ax, ay, az, gx, gy, gz, mx, my, mz, temp))
     
-    def gps_continuous_read(self):
+    def gps_position(self):
         """
-        Reads GPS data from the NEO7M chip
-        Continuous for implementation of thread
+        Reads positional GPS data from the NEO7M chip
         """
-        while True:
-            try:
-                data = self.neo.read()
-                self.gps = data
-            except OSError: # Connection error equates to -999 -- lethals
-                self.gps = (-999, 'ERR', -999, 'ERR', -999)
-            time.sleep(0.25)
+        return self.gps.position
 
     @property
     def accel(self):

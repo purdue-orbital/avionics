@@ -48,7 +48,7 @@ class MPU9250(I2CDevice):
                         GYRO_CONFIG: AK8963_14BIT | AK8963_100HZ
                 }
         """
-        super().__init__(self, mpu_address, "MPU9250")
+        super(MPU9250, self).__init__(mpu_address, "MPU9250")
 
         # let's double check we have the correct device address
         if self.read(WHO_AM_I) is not DEVICE_ID:

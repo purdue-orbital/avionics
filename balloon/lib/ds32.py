@@ -1,5 +1,7 @@
 from i2c_device import I2CDevice
 import RPi.GPIO as GPIO
+from time import sleep
+
 GPIO.setmode(GPIO.BCM)
 
 ### ADDRESSES ###
@@ -13,7 +15,7 @@ class DS3231(I2CDevice):
     """
     
     def __init__(self, name, pin):
-        super().__init__(self, DS32_ADDRESS, name)
+        super(DS3231, self).__init__(DS32_ADDRESS, name)
         self.time = 0
 
         # Set GPIO pin to read clock interrupt
@@ -30,11 +32,11 @@ class DS3231(I2CDevice):
 
         
     def tick(self, channel):
-        self.time += 1
+        self._time += 1
 
     @property
     def time(self):
-        return self._time / 1024.0
+        return (self._time / 1024.0)
 
     @time.setter
     def time(self, value):
@@ -52,7 +54,7 @@ class DS3231(I2CDevice):
         self._temp = value
 
     @staticmethod
-    def __del__(self):
+    def __del__():
         GPIO.cleanup()
         self.bus.close()
 
@@ -61,11 +63,11 @@ if __name__ == "__main__":
     clock = DS3231("DS3231", 17)
     
     try:
-        while (clock.time - int(clock.time) < 0.005):
+        while True:
             print("{:.3f}".format(clock.time))
             print("{:.2f}".format(clock.temp))
+            sleep(1)
             
     except KeyboardInterrupt:
         print("Stop.\n")
-        clock.close()
     

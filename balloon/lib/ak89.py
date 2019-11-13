@@ -20,7 +20,7 @@ class AK8963(I2CDevice):
 
         Needs to be initialized after the MPU9250 s.t. they are on the same network
         """
-        super().__init__(self, ak_address, name)
+        super(AK8963, self).__init__(ak_address, name)
 
         if self.read(AK_WHO_AM_I) is not AK_DEVICE_ID:
             raise Exception('AK8963: init failed to find device')
