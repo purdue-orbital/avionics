@@ -17,7 +17,7 @@ import struct
 ################################
 # MPU9250
 ################################
-MPU9250_ADDRESS = 0x68
+MPU9250_ADDRESS = 0x69
 AK8963_ADDRESS  = 0x0C
 DEVICE_ID       = 0x71
 WHO_AM_I        = 0x75
@@ -137,7 +137,6 @@ class mpu9250(object):
 		y = self.conv(data[2], data[3]) * lsb
 		z = self.conv(data[4], data[5]) * lsb
 
-		print('>> data', data)
 		# ans = self.convv.unpack(*data)
 		# ans = struct.unpack('<hhh', data)[0]
 		# print('func', x, y, z)
