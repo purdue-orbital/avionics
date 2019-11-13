@@ -5,13 +5,36 @@ OK=$'\e[0;32m'
 FILE=$'\e[0;36m'
 NC=$'\e[0m'
 
+local_path='../'
 traceback_path='logs/traceback.log'
-program_path='src/origin.py'
-status_log_path='logs/status[].log'
+program_path='src/'
+program='origin.py'
+status_log_path='../logs/status[].log'
+
+# Move to run.sh working directory
+cd $(dirname "$0")
+cd ${program_path}
 
 # Clear traceback.log
-truncate -s 0 ${traceback_path}
+truncate -s 0 ${local_path}${traceback_path}
 
+text="    ____                 __           
+   / __ \__  ___________/ /_  _____   
+  / /_/ / / / / ___/ __  / / / / _ \  
+ / ____/ /_/ / /  / /_/ / /_/ /  __/  
+/_/    \__,_/_/   \__,_/\__,_/\___/   
+       ____       __    _ __        __
+      / __ \_____/ /_  (_) /_____ _/ /
+     / / / / ___/ __ \/ / __/ __ \`/ / 
+    / /_/ / /  / /_/ / / /_/ /_/ / /  
+    \____/_/  /_.___/_/\__/\__,_/_/   "
+
+echo
+echo "${INFO}${text}${NC}"
+echo
+echo "PURDUE ORBITAL, ${INFO}PURDUE UNIVERSITY${NC}"
+echo "Avionics Sub Team"
+echo
 echo "Checking Python version..."
 
 version=$( python3 -c 'import sys; print(sys.version_info[1])')
@@ -26,18 +49,18 @@ then
     exit 1
 fi
 
-echo "Attempting to run ${FILE}${program_path}${NC}"
+echo "Python check: ${OK}[PASS]${NC}"
+echo
+echo "Attempting to run ${FILE}${program_path}${program}${NC}"
 
-sudo python3 ${program_path} 2> ${traceback_path}
+sudo python3 ${program} 2> ${local_path}${traceback_path}
 if [[ $? == '1' ]]
 then
-    traceback=$( tail -1 ${traceback_path})
+    traceback=$( tail -1 ${local_path}${traceback_path})
     echo "${traceback}"
-    echo "${FILE}${program_path}${NC} did not execute successfully"
+    echo "${FILE}${program_path}${program}${NC} did not execute successfully"
     echo "See ${INFO}${traceback_path}${NC} for the full error stack."
     echo "${FAIL}[Process Failed]${NC}"
     echo
     exit 1
 fi
-
-exit 0
