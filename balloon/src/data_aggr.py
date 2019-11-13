@@ -37,7 +37,7 @@ class Sensors:
         self.console = logging.getLogger('data_aggregation')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
         logging.basicConfig(
-            level=logging.DEBUG, filename='../logs/console.log', filemode='a+', format=_format
+            level=logging.INFO, filename='../logs/status_data.log', filemode='a+', format=_format
         )
 
         self.console.info(f"\n\n### Starting {name} ###\n")

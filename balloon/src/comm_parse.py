@@ -26,7 +26,7 @@ class Control:
     def __init__(self,qdmpin,ignitionpin,rocketlogpin,stabilizationpin,error):
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
-	      self.rocketlogpin = rocketlogpin
+        self.rocketlogpin = rocketlogpin
         self.stabilizationpin = stabilizationpin
 
         # GPIO SETUP
@@ -34,8 +34,8 @@ class Control:
         
         GPIO.setup(qdmpin,GPIO.OUT)
         GPIO.setup(ignitionpin,GPIO.OUT)
-	      GPIO.setup(rocketlogpin,GPIO.OUT)
-	      GPIO.output(rocketlogpin,True)
+        GPIO.setup(rocketlogpin,GPIO.OUT)
+        GPIO.output(rocketlogpin,True)
         GPIO.setup(stabilizationpin,GPIO.OUT)
 
         self.error = error
@@ -94,7 +94,7 @@ class Control:
                 time.sleep(0.1)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.rocketlogpin,False)
-		            GPIO.output(self.ignitionpin,False)
+                GPIO.output(self.ignitionpin,False)
             elif (mode == 2):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
@@ -103,8 +103,8 @@ class Control:
                 self.c.send(data, "status")
                 time.sleep(10)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-		            GPIO.output(self.rocketlogpin,False)
-		            GPIO.output(self.ignitionpin,False)
+                GPIO.output(self.rocketlogpin,False)
+                GPIO.output(self.ignitionpin,False)
 
         return 0
 
