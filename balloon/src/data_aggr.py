@@ -1,9 +1,9 @@
 import sys, os
 import json
-import time
+import datetime
 import threading
+import logging
 import RPi.GPIO as GPIO
-GPIO.setmode(GPIO.BCM)
 
 # Import modules from ../lib and add ../logs to PATH
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
@@ -21,7 +21,7 @@ class Sensors:
     IMU, GPS, RTC, and radio
     """
 
-    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None, clock_pin=17):
+    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None):
         """
         Initializes the Sensors object
 
@@ -34,9 +34,17 @@ class Sensors:
             clock_pin  : GPIO pin the SQW line from the DS3231 is connected to
         """
 
+        self.console = logging.getLogger('data_aggregation')
+        self.console.basicConfig(level=logging.DEBUG, filename='../logs/console.log', filemode='a+')
+        self.console.info(f"Starting {name} at {datetime.datetime.now}")
+
+        rocket_in = 27
+        clock_pin = 17
+
         #on init, setup the rocket input pin and its event handler
-        GPIO.setup(rocketIn, GPIO.IN) #rocketIn pin currently undefined
-        GPIO.add_event_detect(rocketIn, GPIO.FALLING, launchDetect)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(rocket_in, GPIO.IN)
+        GPIO.add_event_detect(rocket_in, GPIO.FALLING, self.launch_detect)
         
         print("Initializing {} sensors...".format(name))
         self.name = name
@@ -69,13 +77,18 @@ class Sensors:
         self.log = open('../logs/data.log', 'a+')
         self.log.write(
             'time (s),alt (m),lat,long,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),'
-            'm_z (mT),temp (C)\n')
+            'm_z (mT),temp (C)\n'
+        )
 
         # Initialize sensor Modules
-        self.clock = DS3231("DS3231", clock_pin)
-        self.imu = MPU9250("MPU9250", mpu_address=imu_address)
-        self.ak = AK8963("AK8963")
-        self.neo = NEO7M(gps_port, 0.5)
+        try: self.clock = DS3231("DS3231", clock_pin)
+        except: self.console.warning("DS3231 not initialized")
+        try: self.imu = MPU9250("MPU9250", mpu_address=imu_address)
+        except: self.console.warning("MPU9250 not initialized")
+        try: self.ak = AK8963("AK8963")
+        except: self.console.warning("AK8963 not initialized")
+        try: self.neo = NEO7M(gps_port, 0.5)
+        except: self.console.warning("NEO 7M GPS not initialized")
         
         self._lock = threading.Lock() # Generate thread lock
         # Spawn GPS thread as daemon (will terminate at end of script)
@@ -92,7 +105,7 @@ class Sensors:
         print("Initialization complete.\n")
     
     #callback function for the rocketIn pin
-    def launchDetect(self):
+    def launch_detect(self):
         self.log.write(f"Launch detected at {self.time}")
         
     def read_all(self):
