@@ -2,6 +2,8 @@ import sys, os
 import json
 import time
 import threading
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
 
 # Import modules from ../lib and add ../logs to PATH
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
@@ -32,6 +34,10 @@ class Sensors:
             clock_pin  : GPIO pin the SQW line from the DS3231 is connected to
         """
 
+        #on init, setup the rocket input pin and its event handler
+        GPIO.setup(rocketIn, GPIO.IN) #rocketIn pin currently undefined
+        GPIO.add_event_detect(rocketIn, GPIO.FALLING, launchDetect)
+        
         print("Initializing {} sensors...".format(name))
         self.name = name
         self.json = {
@@ -84,7 +90,11 @@ class Sensors:
             self.c = None
 
         print("Initialization complete.\n")
-
+    
+    #callback function for the rocketIn pin
+    def launchDetect(self):
+        self.log.write(f"Launch detected at {self.time}")
+        
     def read_all(self):
         """
         Reads from sensors and writes to log file

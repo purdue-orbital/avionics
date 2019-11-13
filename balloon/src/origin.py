@@ -29,7 +29,8 @@ def commProc(d):
 
     print("Running comm_parse.py ...\n")
 
-    ctrl = Control(5,6,13,0.05)#pin number 13 = stabilization pin
+    ctrl = Control(5, 6, rocketlogpin, 13, 0.05) #rocketlogpin currently undefined
+    #pin number 13 = stabilization pin
 
     mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
 
