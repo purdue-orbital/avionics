@@ -1,19 +1,15 @@
 import sys, os
+import serial
 import json
-import datetime
-import threading
-import logging
-import RPi.GPIO as GPIO
+import pynmea2
 
 # Import modules from ../lib and add ../logs to PATH
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
-# from CommunicationsDriver import Comm
-from mpu9 import MPU9250
-from ak89 import AK8963
+from CommunicationsDriver import Comm
+from mpu9 import mpu9250
 from ds32 import DS3231
-from neo7 import NEO7M
 
 class Sensors:
     """
@@ -21,7 +17,7 @@ class Sensors:
     IMU, GPS, RTC, and radio
     """
 
-    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None):
+    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None, clock_pin=17):
         """
         Initializes the Sensors object
 
@@ -34,18 +30,6 @@ class Sensors:
             clock_pin  : GPIO pin the SQW line from the DS3231 is connected to
         """
 
-        self.console = logging.getLogger('data_aggregation')
-        self.console.basicConfig(level=logging.DEBUG, filename='../logs/console.log', filemode='a+')
-        self.console.info(f"Starting {name} at {datetime.datetime.now}")
-
-        rocket_in = 27
-        clock_pin = 17
-
-        #on init, setup the rocket input pin and its event handler
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(rocket_in, GPIO.IN)
-        GPIO.add_event_detect(rocket_in, GPIO.FALLING, self.launch_detect)
-        
         print("Initializing {} sensors...".format(name))
         self.name = name
         self.json = {
@@ -60,52 +44,40 @@ class Sensors:
                         "y": 0,
                         "z": 0
                       },
-                      "mag": {
-                        "x": 0,
-                        "y": 0,
-                        "z": 0
-                      },
+                      "mag": 0,
                       "temp": 0,
                       "acc": {
                         "x": 0,
                         "y": 0,
                         "z": 0
                       }
-        }
+                    }
 
         # Open log file and write header
         self.log = open('../logs/data.log', 'a+')
+
+        # Write header
         self.log.write(
             'time (s),alt (m),lat,long,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),'
-            'm_z (mT),temp (C)\n'
-        )
+            'm_z (mT),temp (C)\n')
 
-        # Initialize sensor Modules
-        try: self.clock = DS3231("DS3231", clock_pin)
-        except: self.console.warning("DS3231 not initialized")
-        try: self.imu = MPU9250("MPU9250", mpu_address=imu_address)
-        except: self.console.warning("MPU9250 not initialized")
-        try: self.ak = AK8963("AK8963")
-        except: self.console.warning("AK8963 not initialized")
-        try: self.neo = NEO7M(gps_port, 0.5)
-        except: self.console.warning("NEO 7M GPS not initialized")
+        self.c = Comm.get_instance()
+        self.clock = DS3231(clock_pin)                        # Create DS3231 Object from ds32.py
+        self.imu = mpu9250(mpu_address=imu_address)           # Create mpu9250 Object from mpu9.py
+        self.neo = serial.Serial(gps_port, 9600, timeout=0.5) # Create Serial Object for the NEO 7M GPS
 
-        self.gps = (0, 0)
+        self.last = (0, 'N', 0, 'E', 0)
         
         if radio_port is not None:  # Create radio object if desired
             try:
-                self.c = Comm.get_instance(self)  # Initialize radio communication
+                self.radio = Module.get_instance(self)  # Initialize radio communication
             except Exception as e:
                 print(e)
         else:
-            self.c = None
+            self.radio = None
 
         print("Initialization complete.\n")
-    
-    #callback function for the rocketIn pin
-    def launch_detect(self):
-        self.log.write(f"Launch detected at {self.time}")
-        
+
     def read_all(self):
         """
         Reads from sensors and writes to log file
@@ -113,42 +85,42 @@ class Sensors:
 
         gx, gy, gz = self.gyro    # works, but negative numbers overflow to 250 dps
         mx, my, mz = self.magnet  # gets data, but is garbage
-        lat, lon = self.gps_position()
+        lat, _, lon, _, alt = self.gps  # works, with occasional SerialException: device reports readiness to read
         ax, ay, az = self.accel   # works (uncalibrated)
         temp = self.temperature   # works (uncalibrated)
         t = self.clock.time
-        alt = 0
 
         # Write to .log file
         self.log.write(
             "{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
                 t, alt, lat, lon, ax, ay, az, gx, gy, gz, mx, my, mz, temp))
 
-        # Assigning each value in given list to dictionary
-        self.json["alt"] = alt
-        self.json["GPS"]["long"] = lon
-        self.json["GPS"]["lat"] = lat
-        self.json["gyro"]["x"] = gx
-        self.json["gyro"]["y"] = gy
-        self.json["gyro"]["z"] = gz
-        self.json["mag"]["x"] = mx
-        self.json["mag"]["y"] = my
-        self.json["mag"]["z"] = mz
-        self.json["temp"] = temp
-        self.json["acc"]["x"] = ax
-        self.json["acc"]["y"] = ay
-        self.json["acc"]["z"] = az
+        # Assigning each value in given list to dict entry
+        self.json["Altitude"] = alt
+        self.json["GPS"]["longitude"] = lon
+        self.json["GPS"]["latitude"] = lat
+        self.json["Gyroscope"]["x"] = gx
+        self.json["Gyroscope"]["y"] = gy
+        self.json["Gyroscope"]["z"] = gz
+        self.json["Magnetometer"]["x"] = mx
+        self.json["Magnetometer"]["y"] = my
+        self.json["Magnetometer"]["z"] = mz
+        self.json["Temperature"] = temp
+        self.json["Accelerometer"]["x"] = ax
+        self.json["Accelerometer"]["y"] = ay
+        self.json["Accelerometer"]["z"] = az
 
     def pass_to(self, manager):
         """
         Writes most recent data to a shared dictionary w/ command thread
 
         Args:
-            manager: A Manager() dictionary object passed through by origin.py
+            manager: A Manager() dict object passed through by origin.py
         """
         # This is straight up cancerous, but the way dict management works between
-        # processes requires the dictionary to be reassigned to notify the DictProxy
+        # processes requires the dict to be reassigned to notify the DictProxy
         # of changes to itself
+        time.sleep(0.01)
         temp = manager[0]
         temp = self.json
         # Reassign here
@@ -166,30 +138,39 @@ class Sensors:
         Prints most recent data collected for debugging
         """
 
-        alt = self.json["alt"]
-        lon = self.json["GPS"]["long"]
-        lat = self.json["GPS"]["lat"]
-        gx = self.json["gyro"]["x"]
-        gy = self.json["gyro"]["y"]
-        gz = self.json["gyro"]["z"]
-        mx = self.json["mag"]["x"]
-        my = self.json["mag"]["y"]
-        mz = self.json["mag"]["z"]
-        temp = self.json["temp"]
-        ax = self.json["acc"]["x"]
-        ay = self.json["acc"]["y"]
-        az = self.json["acc"]["z"]
+        alt = self.json["Altitude"]
+        lon = self.json["GPS"]["longitude"]
+        lat = self.json["GPS"]["latitude"]
+        gx = self.json["Gyroscope"]["x"]
+        gy = self.json["Gyroscope"]["y"]
+        gz = self.json["Gyroscope"]["z"]
+        mx = self.json["Magnetometer"]["x"]
+        my = self.json["Magnetometer"]["y"]
+        mz = self.json["Magnetometer"]["z"]
+        temp = self.json["Temperature"]
+        ax = self.json["Accelerometer"]["x"]
+        ay = self.json["Accelerometer"]["y"]
+        az = self.json["Accelerometer"]["z"]
         t = self.clock.time
         
         print(
             "{:.3f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
                 t, alt, lat, lon, ax, ay, az, gx, gy, gz, mx, my, mz, temp))
-    
-    def gps_position(self):
+
+    def speed_test(self, dur):
         """
-        Reads positional GPS data from the NEO7M chip
+        Tests the speed of data acquisition from sensors for a given time.
+
+        Args:
+            dur: duration (in seconds) of test
         """
-        return self.gps.position
+        start = self.clock.time
+        i = 0
+
+        while self.clock.time < start + dur:
+            self.readAll()
+            i = i + 1
+        print("\nPolling rate: {} Hz\n".format(i / dur))
 
     @property
     def accel(self):
@@ -227,7 +208,7 @@ class Sensors:
         Read magnetometer data from the MPU9250 chip
         """
         try:
-            self.magnet = self.ak.mag
+            self.magnet = self.imu.mag
         except OSError:
             self.magnet = (-999, -999, -999)
         return self._magnet
@@ -250,26 +231,35 @@ class Sensors:
     @temperature.setter
     def temperature(self, value):
         self._temperature = value
+
+    @property
+    def gps(self):
+        """
+        Reads GPS data from the NEO7M chip
+        """
+        string = self.neo.readline().decode('utf-8')
         
-    def speed_test(self, dur):
-        """
-        Tests the speed of data acquisition from sensors for a given time.
+        if (string.find('GGA') > 0):
+            msg = pynmea2.parse(string)
 
-        Args:
-            dur: duration (in seconds) of test
-        """
-        start = self.clock.time
-        i = 0
+            # Uncomment to print
+            # if False:
+            #     print("Timestamp: %s -- Lat: %s %s -- Lon: %s %s -- Altitude: %s %s" % (msg.timestamp,msg.lat,msg.lat_dir,msg.lon,msg.lon_dir,msg.altitude,msg.altitude_units))
 
-        while self.clock.time < start + dur:
-            self.read_all()
-            i = i + 1
-        print("\nPolling rate: {} Hz\n".format(i / dur))
+            if msg.lat != '':
+                self.gps = (msg.lat, msg.lat_dir, msg.lon, msg.lon_dir, msg.altitude)
+            else:
+                self.gps = (-999, 'ERR', -999, 'ERR', -999)
+            return self._gps
+
+    @gps.setter
+    def gps(self, values):
+        self._gps = values
 
 
 if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
-    sens = Sensors("Balloon Computer")
+    sens = Sensors("MPU9250")
 
     while True:
         sens.read_all()

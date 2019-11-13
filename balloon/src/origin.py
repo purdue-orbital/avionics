@@ -28,38 +28,41 @@ def commProc(d):
     """
 
     print("Running comm_parse.py ...\n")
-    ctrl = Control(5, 6, 0.05)
 
-    result = ctrl.ConnectionCheck()
-    endT = datetime.now() + timedelta(seconds=10)
-    while (result == 0) & (datetime.now() < endT):
-        result = ctrl.ConnectionCheck()
+    ctrl = Control(5, 6, rocketlogpin, 13, 0.05) #rocketlogpin currently undefined
+    #pin number 13 = stabilization pin
+
+    mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
+
+    result = ctrl.connection_check()
+    endT = datetime.now() + timedelta(seconds = 10)
+    while ((result == None) & (datetime.now() < endT)):
+        result = ctrl.connection_check()
     if result == 0:
         ctrl.QDMCheck(0)
     else:
+        ctrl.receivedata()
         while not ctrl.commands.empty():
-            GSDATA = ctrl.receivedata()
-
-            QDM = GSDATA['QDM']
-            IGNITION = GSDATA['Ignition']
-            #    CDM = GSDATA['CDM']
-            #    STAB = GSDATA['Stabilization']
-            #    CRASH = GSDATA['Crash']
-            #    DROGUE = GSDATA['Drogue']
-            #    MAIN_CHUTE = GSDATA['Main_Chute']
-
-            ctrl.QDMCheck(QDM)
+            GSDATA = ctrl.commands.get()
+    
+            CType = GSDATA['command']
+            if (CType == 'QDM'):
+                ctrl.QDMCheck(0)
+            if (CType == 'Stabilize'):
+                ctrl.Stabilization(d)
+            if (CType == 'Ignition'):
+                ctrl.Ignition(mode,d)
 
         ## NEED CHANGES ###
-        rocket = d
-        balloon = d
-
-        ctrl.readdata(rocket, balloon)
-
-        condition = ctrl.dataerrorcheck()
-        mode = 1
-        if condition & IGNITION:
-            ctrl.Ignition(mode)
+        #rocket = d
+   # balloon = Manager
+            
+    #ctrl.readdata(d)
+        
+       # condition = ctrl.dataerrorcheck()
+       # mode = 1
+       # if (IGNITION):
+       #     ctrl.Ignition(mode)
 
 
 if __name__ == "__main__":
