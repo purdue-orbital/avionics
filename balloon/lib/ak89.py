@@ -26,12 +26,12 @@ class AK8963(I2CDevice):
             raise Exception('AK8963: init failed to find device')
         self.write(AK8963_CNTL1, (AK8963_16BIT | AK8963_8HZ))
               
-    def read_xyz(self, address, register):
+    def read_xyz(self, register):
         """
         Reads x, y, and z axes at once and turns them into a tuple.
         """
         # data is MSB, LSB, MSB, LSB ...
-        data = self.bus.read_i2c_block_data(address, register, 6)
+        data = self.read_block(register, 6)
 
         # data = []
         # for i in range(6):
@@ -59,4 +59,4 @@ class AK8963(I2CDevice):
     
     @property
     def mag(self):
-        return self.read_xyz(AK8963_ADDRESS, MAGNET_DATA)
+        return self.read_xyz(MAGNET_DATA)

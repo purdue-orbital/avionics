@@ -1,6 +1,6 @@
 import sys, os
 import json
-import datetime
+import time
 import threading
 import logging
 import RPi.GPIO as GPIO
@@ -35,8 +35,12 @@ class Sensors:
         """
 
         self.console = logging.getLogger('data_aggregation')
-        self.console.basicConfig(level=logging.DEBUG, filename='../logs/console.log', filemode='a+')
-        self.console.info(f"Starting {name} at {datetime.datetime.now}")
+        _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
+        logging.basicConfig(
+            level=logging.DEBUG, filename='../logs/console.log', filemode='a+', format=_format
+        )
+
+        self.console.info(f"\n\n### Starting {name} ###\n")
 
         rocket_in = 27
         clock_pin = 17
@@ -44,9 +48,9 @@ class Sensors:
         #on init, setup the rocket input pin and its event handler
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(rocket_in, GPIO.IN)
+        GPIO.setup(23, GPIO.OUT)
         GPIO.add_event_detect(rocket_in, GPIO.FALLING, self.launch_detect)
         
-        print("Initializing {} sensors...".format(name))
         self.name = name
         self.json = {
                       "origin": "balloon",
@@ -82,29 +86,44 @@ class Sensors:
 
         # Initialize sensor Modules
         try: self.clock = DS3231("DS3231", clock_pin)
-        except: self.console.warning("DS3231 not initialized")
+        except:
+            self.console.warning("DS3231 not initialized")
+            self.clock = time
+            self.console.info("Using system clock")
         try: self.imu = MPU9250("MPU9250", mpu_address=imu_address)
         except: self.console.warning("MPU9250 not initialized")
         try: self.ak = AK8963("AK8963")
         except: self.console.warning("AK8963 not initialized")
-        try: self.neo = NEO7M(gps_port, 0.5)
+        try: self.neo = NEO7M()
         except: self.console.warning("NEO 7M GPS not initialized")
 
+        GPIO.output(23, GPIO.HIGH)
+        time.sleep(2)
+        GPIO.output(23, GPIO.LOW)
+        
         self.gps = (0, 0)
         
         if radio_port is not None:  # Create radio object if desired
             try:
                 self.c = Comm.get_instance(self)  # Initialize radio communication
             except Exception as e:
-                print(e)
+                self.console.error(e)
         else:
             self.c = None
+            self.console.warning("Radio not initialized")
 
-        print("Initialization complete.\n")
+        self.console.info("Initialization complete")
+
+    def __enter__(self):
+        return self
+        
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
+        GPIO.cleanup()
     
     #callback function for the rocketIn pin
-    def launch_detect(self):
-        self.log.write(f"Launch detected at {self.time}")
+    def launch_detect(self, callback):
+        logging.info(f"Launch detected at mission time {self.clock.time}")
         
     def read_all(self):
         """
@@ -189,7 +208,7 @@ class Sensors:
         """
         Reads positional GPS data from the NEO7M chip
         """
-        return self.gps.position
+        return self.neo.position
 
     @property
     def accel(self):
@@ -198,7 +217,8 @@ class Sensors:
         """
         try:
             self.accel = self.imu.accel
-        except OSError:
+        except Exception as e:
+            self.console.error(e)
             self.accel = (-999, -999, -999)
         return self._accel
 
@@ -213,7 +233,8 @@ class Sensors:
         """
         try:
             self.gyro = self.imu.gyro
-        except OSError:
+        except Exception as e:
+            self.console.error(e)
             self.gyro = (-999, -999, -999)
         return self._gyro
     
@@ -228,7 +249,8 @@ class Sensors:
         """
         try:
             self.magnet = self.ak.mag
-        except OSError:
+        except Exception as e:
+            self.console.error(e)
             self.magnet = (-999, -999, -999)
         return self._magnet
 
@@ -243,7 +265,8 @@ class Sensors:
         """
         try:
             self.temperature = self.imu.temp
-        except OSError:
+        except Exception as e:
+            self.console.error(e)
             self.temperature = -999
         return self._temperature
 
@@ -271,6 +294,7 @@ if __name__ == "__main__":
     print("Running data_aggr.py ...\n")
     sens = Sensors("Balloon Computer")
 
-    while True:
-        sens.read_all()
-        sens.printd()
+    with sens:
+        while True:
+            sens.read_all()
+            sens.printd()

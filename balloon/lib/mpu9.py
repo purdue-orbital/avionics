@@ -27,7 +27,6 @@ GYRO_250DPS  = 0x00
 GYRO_500DPS  = (0x01 << 3)
 GYRO_1000DPS = (0x02 << 3)
 GYRO_2000DPS = (0x03 << 3)
-# --- AK8963 ------------------
 
         
 class MPU9250(I2CDevice):
@@ -72,16 +71,16 @@ class MPU9250(I2CDevice):
         self.alsb = 2 / 2**15
         self.glsb = 250 / 2**15
 
-    def read16(self, address, register):
-        data = self.bus.read_i2c_block_data(address, register, 2)
+    def read16(self, register):
+        data = self.read_block(register, 2)
         return self.conv(data[0], data[1])
 
-    def read_xyz(self, address, register, lsb):
+    def read_xyz(self, register, lsb):
         """
         Reads x, y, and z axes at once and turns them into a tuple.
         """
         # data is MSB, LSB, MSB, LSB ...
-        data = self.bus.read_i2c_block_data(address, register, 6)
+        data = self.read_block(register, 6)
 
         # data = []
         # for i in range(6):
@@ -111,11 +110,11 @@ class MPU9250(I2CDevice):
 
     @property
     def accel(self):
-        return self.read_xyz(MPU9250_ADDRESS, ACCEL_DATA, self.alsb)
+        return self.read_xyz(ACCEL_DATA, self.alsb)
 
     @property
     def gyro(self):
-        return self.read_xyz(MPU9250_ADDRESS, GYRO_DATA, self.glsb)
+        return self.read_xyz(GYRO_DATA, self.glsb)
 
     @property
     def temp(self):
@@ -125,6 +124,6 @@ class MPU9250(I2CDevice):
         pg 33 datasheet:
         Temp_degC = ((Temp_out - Temp_room)/Temp_Sensitivity) + 21 degC
         """
-        temp_out = self.read16(MPU9250_ADDRESS, TEMP_DATA)
+        temp_out = self.read16(TEMP_DATA)
         temp = temp_out / 333.87 + 21.0  # these are from the datasheets
         return temp

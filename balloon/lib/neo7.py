@@ -5,10 +5,10 @@ class NEO7M():
     def __init__(self):
         gpsd.connect()
 
-    def position(self):
-        return poll.position()
-        
     @property
+    def position(self):
+        return self.poll().position()
+        
     def poll(self):
         return gpsd.get_current()
         
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     while True:
         try:
-            print(gps.poll().position())
+            print(gps.position)
         except UserWarning as e:
             print(e)
 

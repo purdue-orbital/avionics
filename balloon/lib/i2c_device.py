@@ -15,9 +15,12 @@ class I2CDevice:
     def read(self, register):
         return self.bus.read_byte_data(self.address, register)
 
+    def read_block(self, register, num):
+        data = []
+        for i in range(0, num):
+            data[i] = self.read(register + i)
+
+        return data
+    
     def write(self, register, data):
         self.bus.write_byte_data(self.address, register, data)
-
-    def __del__(self):
-        # Any special requirements to close sensor
-        self.bus.close()
