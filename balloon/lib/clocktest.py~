@@ -1,4 +1,0 @@
-from ds3231 import DS3231
-
-if __name__ == '__main__':
-    clock = DS3231(
