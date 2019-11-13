@@ -6,8 +6,8 @@ import logging
 import RPi.GPIO as GPIO
 
 # Import modules from ../lib and add ../logs to PATH
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'lib')
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'logs')
+sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
+sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
 # from CommunicationsDriver import Comm
 from mpu9 import MPU9250
@@ -298,4 +298,3 @@ if __name__ == "__main__":
         while True:
             sens.read_all()
             sens.printd()
-            time.sleep(1)
