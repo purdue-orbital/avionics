@@ -23,20 +23,22 @@ class Control:
         json["Stabilization"] = 0
         return json
 
-    def __init__(self,qdmpin,ignitionpin,error):
+    def __init__(self,qdmpin,ignitionpin,stabilizationpin,error):
         
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
+        self.stabilizationpin = stabilizationpin
         
         GPIO.setmode(GPIO.BCM)
         
         GPIO.setup(qdmpin,GPIO.OUT)
         GPIO.setup(ignitionpin,GPIO.OUT)
-        
+        GPIO.setup(stabilizationpin,GPIO.OUT)
+
         self.error = error
         
         self.balloon = None
-        self.rocket = None
+        # self.rocket = None
 
         self.c = Comm.get_instance()
         
@@ -78,8 +80,6 @@ class Control:
         return void
         '''
         
-        
-        
         launch = self.launch_condition()
         if launch:
             if (mode == 1):
@@ -111,7 +111,7 @@ class Control:
         
         compare condition of rocket and ballon and check if their difference has percent error less than 5 %
         
-        return result - condition within range or not
+        return none
         '''
         lon = balloon['GPS']['long']
         lat = balloon['GPS']['lat']
@@ -150,7 +150,19 @@ class Control:
         return (altitude & spinrate & direction)
 
     def connection_check(self):
-        return os.path.isfile('./receive/[groundstation].json')
+
+        connected = self.radio.remote_device
+            
+        return connected
+
+    def stabilization(self,manager):
+        self.read_data(manager)
+        condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
+        if (condition):
+            GPIO.output(self.stabilizationpin,True)
+            data = self.generate_status_json()
+            data["Stabilization"] = 1
+            self.c.send(data,"status")
 
     def receive_data(self):
         self.commands.put(json.loads(self.c.receive()))
