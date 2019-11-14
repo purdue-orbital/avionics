@@ -8,7 +8,7 @@ NC=$'\e[0m'
 local_path='../'
 traceback_path='logs/traceback.log'
 program_path='src/'
-program='origin.py'
+program='balloon.py'
 ARGS=''
 
 
