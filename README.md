@@ -79,4 +79,27 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
    
    [How to set up Pi as an access point with an Ethernet bridge](https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md)
    *  [How to correct hostapd.service masked error](https://github.com/raspberrypi/documentation/issues/1018#issuecomment-471335938)
+
+
+
+Balloon Flight Computer
+=======================
+
+Below you will find a simple explanation of this system and its subsequent processes.
+
+### Components ###
+   1. Raspberry Pi 3B+: Flight computer, running Raspbian Lite. Software programmed in Python
+   2. MPU9250/MS5611: Combined accelerometer/gyroscope, along with a pressure sensor (respectively).
+   3. NEO 7M GPS: GPS unit
+   4. DS3231 RTC: Millisecond precision for time
+   5. Radio: Data transfer to Ground Station via their API through USB Serial
+   
+## Interaction ##
+
+`src/sensors.py` Collects sensor data and transfers to ground station via Radio and `src/control.py` via Python's multithreading capability
+
+`src/control.py` Makes data-driven decisions for operation of launch platform and rocket
+
+`src/origin.py` Runs separate threads for `src/sensors.py` and `src/control.py`, as well as passes data between
+
 </span>
