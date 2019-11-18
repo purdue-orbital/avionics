@@ -50,6 +50,8 @@ Finally, enter `git push --set-upstream origin <name>` the first time you push t
 
 Go to your branch on Github and click *Make a Pull Request* when you're ready to add your changes to the _master_ branch. Only do this when the new additions have been fully debugged and tested!
 
+Once your task had been completed and committed to the _master_ branch, enter `git checkout master` on the Pi, followed by `git branch -D <name>` to remove the old branch. Lastly, type `git pull` to re-update your version of master and begin the process anew.
+
 ## Troubleshooting ##
 
 *  ### Unable to connect to the Pi (can't reach server) ###
