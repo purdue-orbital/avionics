@@ -7,7 +7,9 @@ class NEO7M():
 
     @property
     def position(self):
-        return self.poll().position()
+        last = self.poll()
+        
+        return last.position(), last.altitude()    
         
     def poll(self):
         return gpsd.get_current()

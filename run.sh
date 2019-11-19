@@ -57,7 +57,7 @@ for i in "$@"
 do
     case $i in
 	-b|--balloon)
-	    program='origin.py'
+	    program='balloon.py'
 	    ;;
 	-r|--rocket)
 	    program='rocket.py'
@@ -76,7 +76,7 @@ done
 
 echo "Attempting to run ${FILE}${program_path}${program}${NC}"
 
-sudo python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
+sudo pipenv run python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
 if [[ $? == '1' ]]
 then
     traceback=$( tail -1 ${local_path}${traceback_path})

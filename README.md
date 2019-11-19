@@ -10,49 +10,47 @@ This is the GitHub repository for all software pertaining to Purdue Orbital's *H
 
 ### 1. Connecting to the Raspberry Pi ###
 
-Currently, there are four flight computers -- all RPi Model 3 B+, one of which operates in the BIDC with a monitor, keyboard, and mouse. This setup has been found to be more reliable than the following method. Connection can either be local, or over `PAL3.0`. 
+Currently, there are two flight computers -- both RPi Model 3 B+. Connection can either be local, or over `PAL3.0` using ethernet. 
 
-//NOTE: Currently, WiFi is not configured for this Pi, so this method isn't functional.
+//NOTE: Currently, WiFi is not configured for these Pis, so this method isn't functional.
 
 To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Windows users can also use the command prompt. On the Pi, type `ifconfig | grep 'inet '`. The output should look something like:
 
-`ζ:~/Github/Avionics$ ifconfig | grep 'inet '`  
+`$ ifconfig | grep 'inet '`  
 
         inet 127.0.0.1  netmask 255.0.0.0
         inet 10.186.110.99  netmask 255.255.240.0  broadcast 10.186.111.255
         
-The Pi's local IP address for `PAL3.0` is preceded by `inet`, and on the same line as `broadcast`. In this example, it is `10.186.110.99`. Follow the instructions in the next section using this IP instead of the local Pi IP.
+The Pi's local IP address for `PAL3.0` is preceded by `inet`, and on the same line as `broadcast`. In this example, it is `10.186.110.99`.
 
+Next, ask an avionics member to add your user to each computer. Choose a password and a short username (these will be your login credentials each time). Enter
+`sudo adduser <username>`
+Type your first and last name as prompted -- all other prompts can be skipped. Next, enter
+`sudo usermod -aG sudo <username>`
+After this, proceed to your OS for instructions on connecting.
 
-### 2. Connecting to the Raspberry Pi (Headless) ###
+* ### Windows Users ###
+On Windows, there are two options for SSHing into the Pi: PuTTY or the command prompt. PuTTY is generally more compatible with remote shells, so it's the recommended connection method. After launching PuTTY, enter `<username>@<IP>` into the *Host Name* box and click *Open*.
+You will be prompted to enter your password; once you do, you will be connected.
 
-Currently, there are four flight computers -- all RPi Model 3 B+, three of which share the name `AvionicsPiX`, where `X` is the system number documented on the Pi packaging. It can be connected to through SSH (Secure Shell). The Pi broadcasts its own network, called `AvionicsPiAPX`, and is used as an access point to SSH into. Users must first power on the Pi (it may take up to a minute to fully boot up). Once the Pi is booted, users should notice a new network available to connect to with the name `AvionicsPiAPX`. Connect to it using the password `PurdueOrbital`. You will now be on a local network containing the Pi and your computer. Internet is available by connecting an ethernet cable to the Pi's port -- this makes it act as an access point to `PAL3.0`.
+* ### MacOS Users ###
+In the terminal, enter `ssh <username>@<IP>`. You will be prompted to enter your password; once you do, you will be connected.
 
-To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Windows users can also use the command prompt.
+### 2. Cloning the Repository and Staying Up-to-Date ###
 
-*  **Windows Users:** Open the PuTTY client. In the prompt beneath **Host Name (or IP address)** type the following: 
+Orbital uses Git for version control of software. This is achieved by using separate branches for different tasks. The _master_ branch contains the most recent functional version of the repository. Changes can't be made directly to this branch; to make changes, a new branch must be made and edited, followed by a *Pull Request*.
 
-   `pi@192.168.#.1` - # is indicated on the Pi packaging
+The first time you log in, enter
+`git clone https://github.com/purdue-orbital/avionics.git`
+This will clone the most recent version of the repository, creating a local version on your profile. Before you do any work, always type `git pull`. This will ensure your version of the _master_ branch is the most up-to-date. Next, type `git branch <name>`, where `<name>` is a descriptive identifier for the task you are working on. Finally, type `git checkout <name>`.
 
-   Here `pi` denotes the user on the machine, and `192.168.#.1` is the static IP address. You can save this device using the **Save** and **Load** functions. Afterwards, press **Open**. You will be redirected to a terminal, and 
-   prompted:
+The working branch is now _<name>_ instead of _master_. Once changes are made, to add them to _master_ type `git commit --interactive`. Select only the files you want to change on master, then exit and enter a descriptive message into the `COMMITMSG` file that is opened.
 
-   `pi@192.168.#.1's password: `
+Finally, enter `git push --set-upstream origin <name>` the first time you push to connect your local version to a remote branch (after this is set, you can use `git push`). Enter your Github credentials when prompted: your work should now be on Github!
 
-   Enter the following password exactly as displayed:
-                        
-   `PurdueOrbital`
-   
-   Upon first login, you will be asked something along these lines:
-   
-   `Authenticity of the host ... cannot be established. Do you ...?`
+Go to your branch on Github and click *Make a Pull Request* when you're ready to add your changes to the _master_ branch. Only do this when the new additions have been fully debugged and tested!
 
-   Enter `yes`.
-
-   You are now connected to the Pi via SSH. You may also be able to type `ssh pi@192.168.#.1` into the command prompt and proceed as follows, but I'm not 100% on that. If connection fails, see **Troubleshooting**.
-
-*  **MacOS Users:** Same process as Windows users, except through the terminal
-
+Once your task had been completed and committed to the _master_ branch, enter `git checkout master` on the Pi, followed by `git branch -D <name>` to remove the old branch. Lastly, type `git pull` to re-update your version of master and begin the process anew.
 
 ## Troubleshooting ##
 
