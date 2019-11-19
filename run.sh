@@ -36,13 +36,21 @@ echo
 echo "PURDUE ORBITAL, ${INFO}PURDUE UNIVERSITY${NC}"
 echo "Avionics Sub Team"
 echo
+
+if [ "$EUID" -ne 0 ]
+then
+    echo "${FAIL}[Error]${NC} The script ${FILE}run.sh${NC} requires root permissions to execute."
+    echo "Please run as root or use ${FILE}sudo <command>${NC}"
+    exit 1
+fi
+
 echo "Checking Python version..."
 
 version=$( python3 -c 'import sys; print(sys.version_info[1])')
-if [[ ${version} -lt '5' ]]
+if [[ ${version} -lt '6' ]]
 then
     echo
-    echo "${FAIL}[ERROR]${NC} Python version must be 3.5 or higher"
+    echo "${FAIL}[ERROR]${NC} Python version must be 3.6 or higher"
     echo "Your version is:"
     python3 --version
     echo "${FAIL}[Process Failed]${NC}"
