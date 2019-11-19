@@ -1,4 +1,2 @@
-sudo apt install rpi.gpio
-sudo apt install gpsd gpsd-clients
-sudo apt install python3-pip
+sudo apt install rpi.gpio gpsd gpsd-clients python3-pip -y
 sudo pip3 install pipenv
