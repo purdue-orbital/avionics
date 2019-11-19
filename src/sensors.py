@@ -132,11 +132,10 @@ class Sensors:
 
         gx, gy, gz = self.gyro    # works, but negative numbers overflow to 250 dps
         mx, my, mz = self.magnet  # gets data, but is garbage
-        lat, lon = self.gps_position()
+        lat, lon, alt = self.gps_position()
         ax, ay, az = self.accel   # works (uncalibrated)
         temp = self.temperature   # works (uncalibrated)
         t = self.clock.time
-        alt = 0
 
         # Write to .log file
         self.log.write(
