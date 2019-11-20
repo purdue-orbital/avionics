@@ -102,10 +102,10 @@ class MPU9250(I2CDevice):
         """
         http://stackoverflow.com/questions/26641664/twos-complement-of-hex-number-in-python
         """
-        value = lsb | (msb << 8)
-        if value >= (1 << 15):
-            value -= (1 << 15)
-        # print(lsb, msb, value)
+        value = (msb << 8) | lsb
+        print(f"msb: {msb}")
+        if (value>>15):
+            return -(value - (1<<16))
         return value
 
     @property
