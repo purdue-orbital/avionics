@@ -98,6 +98,6 @@ Below you will find a simple explanation of this system and its subsequent proce
 
 `src/control.py` Makes data-driven decisions for operation of launch platform and rocket
 
-`src/origin.py` Runs separate threads for `src/sensors.py` and `src/control.py`, as well as passes data between
+`src/balloon.py` Runs separate threads for `src/sensors.py` and `src/control.py`, as well as passes data between
 
 </span>
