@@ -17,7 +17,7 @@ class NEO7M():
 
 if __name__ == "__main__":
 
-    gps = NEO7M();
+    gps = NEO7M()
 
     while True:
         try:
