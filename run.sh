@@ -71,7 +71,17 @@ do
 	    program='rocket.py'
 	    ;;
 	-p|--printing)
-	    ARGS+=' --printing'
+	    ARGS+=' -p'
+	    ;;
+	-h|--help)
+	    echo "The setup script for Purdue Orbital's balloon computer environment."
+	    echo "Usage: sudo ./run.sh <args>"
+	    echo
+	    echo "Arguments:"
+	    echo -e "\t-b, --balloon\tLaunch balloon environment"
+	    echo -e "\t-r, --rocket\tLaunch rocket environment"
+	    echo -e "\t-h, --help\tOpen this message"
+	    echo
 	    ;;
 	*)
 	    echo "${FAIL}[ERROR]${NC} Command line option $i is not a supported argument."
