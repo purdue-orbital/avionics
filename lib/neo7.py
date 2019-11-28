@@ -4,12 +4,12 @@ from time import sleep
 class NEO7M():
     def __init__(self):
         gpsd.connect()
-
+        
     @property
     def position(self):
         last = self.poll()
-        
-        return last.position(), last.altitude()    
+
+        return (*last.position, last.altitude())    
         
     def poll(self):
         return gpsd.get_current()

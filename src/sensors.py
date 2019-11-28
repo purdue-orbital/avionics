@@ -6,6 +6,7 @@ import logging
 import RPi.GPIO as GPIO
 
 # Import modules from ../lib and add ../logs to PATH
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
@@ -109,7 +110,7 @@ class Sensors:
         try: self.clock = DS3231("DS3231", clock_pin)
         except:
             self.console.warning("DS3231 not initialized")
-            self.clock.time = time.time()
+            self.clock = time
             self.console.info("Using system clock")
         try: self.imu = MPU9250("MPU9250", mpu_address=imu_address)
         except: self.console.warning("MPU9250 not initialized")
@@ -123,8 +124,6 @@ class Sensors:
         # GPIO.output(23, GPIO.HIGH)
         # time.sleep(2)
         # GPIO.output(23, GPIO.LOW)
-        
-        self.gps = (0, 0)
         
         if radio_port is not None:  # Create radio object if desired
             try:
@@ -153,22 +152,26 @@ class Sensors:
         Writes specified sensors to log file
         """
         head = self.list.head
-
+        string = []
+        
         while head is not None:
-            self.log.write(*head.name, sep=",")
+            string.append(",".join([str(x) for x in head.name()]))
             head = head.next
+
+        self.log.write(",".join(string) + "\n")
 
     def print(self):
         """
         Prints most recent data collected for debugging
         """
         head = self.list.head
-
-        while head is not None:
-            print(*head.name, sep=",", end="")
-            head = head.next
+        string = []
         
-        print() # Add newline to end
+        while head is not None:
+            string.append(",".join([str(x) for x in head.name()]))
+            head = head.next
+
+        print(",".join(string))
 
     def pass_to(self, manager):
         """
@@ -209,6 +212,20 @@ class Sensors:
         """
         self.list.add(self.Function(name, freq, args))
 
+    @property
+    def least(self):
+        """
+        Finds least frequently polled sensor
+        """
+        head = self.list.head
+        max = head.freq
+        
+        while head is not None:
+            if (head.freq > max): max = head.freq
+            head = head.next
+
+        return max
+
     def caller(self, function, hz, *args, **kwargs):
         """
         Calls a function at a defined frequency (used for polling).
@@ -219,10 +236,13 @@ class Sensors:
             **kwargs: keyword arguments you want passed to the function
         """
         start = self.clock.time
+        print(start)
         while True:
             if (self.clock.time > (start + 1/hz)):
+                print("Enter %f", self.clock.time)
                 function(*args, **kwargs)
                 start = self.clock.time
+            else: time.sleep(1/hz)
 
     def stitch(self):
         """
@@ -234,93 +254,73 @@ class Sensors:
 
         while head is not None:
             if head.args is not None:
-                t = threading.Thread(target=self.caller, args=(head.name, head.freq, head.args), daemon=True)
-            else: t = threading.Thread(target=self.caller, args=(head.name, head.freq), daemon=True)
+                t = threading.Timer(head.freq, head.name, args=head.args)
+            else: t = threading.Timer(head.freq, head.name)
 
+            t.daemon = True
             t.start()
             head = head.next
-    
-    @property
-    def gps(self):
-        return self._gps
 
-    @gps.setter
-    def gps(self, callback):
+    def gps(self, *args):
         """
         Reads positional GPS data from the NEO7M chip
         """
-        if (callback == "w"):
-            self._gps = self.neo.position
-        else: self._gps = callback
-
-    @property
-    def accel(self):
-        return self._accel
-
-    @accel.setter
-    def accel(self, callback):
+        if not args: return self._gps
+        elif (args[0] == "w"):
+            try:
+                self._gps = self.neo.position
+            except Exception as e:
+                self.console.error(e)
+                self._gps = (-999, -999, -999)
+        
+    def accel(self, *args):
         """
         Reads acceleration from the MPU9250 chip
         """
-        if (callback == "w"):
+        if not args: return self._accel
+        elif (args[0] == "w"):
             try:
                 self._accel = self.imu.accel
             except Exception as e:
                 self.console.error(e)
                 self._accel = (-999, -999, -999)
-        else: self._accel = callback
-            
-    @property
-    def gyro(self):
-        return self._gyro
-    
-    @gyro.setter
-    def gyro(self, callback):
+
+    def gyro(self, *args):
         """
         Reads gyroscopic data from the MPU9250 chip
         """
-        if (callback == "w"):
+        if not args: return self._gyro
+        elif (args[0] == "w"):
             try:
                 self._gyro = self.imu.gyro
             except Exception as e:
                 self.console.error(e)
                 self._gyro = (-999, -999, -999)
-        else: self._gyro = callback
-        
-    @property
-    def magnet(self):
-        return self._magnet
-
-    @magnet.setter
-    def magnet(self, callback):
+                
+    def magnet(self, *args):
         """
         Read magnetometer data from the MPU9250 chip
         """
-        if (callback == "w"):
+        if not args: return self._magnet
+        elif (args[0] == "w"):
             try:
                 self._magnet = self.ak.mag
             except Exception as e:
                 self.console.error(e)
                 self._magnet = (-999, -999, -999)
-        else: self._magnet = callback
-
-    @property
-    def temperature(self):
-        return self._temperature
-
-    @temperature.setter
-    def temperature(self, callback):
+        
+    def temperature(self, *args):
         """
         Reads temperature data from the MS5611 chip
         """
-        if (callback == "w"):
+        if not args: return self._temperature
+        elif (args[0] == "w"):
             try:
-                self._temperature = self.imu.temp
+                self._temperature = self.clock.temp
             except Exception as e:
                 self.console.error(e)
                 self._temperature = -999
-        else: self._temperature = callback
-        
+                
     def speed_test(self, dur):
         """
         Tests the speed of data acquisition from sensors for a given time.
@@ -342,9 +342,15 @@ if __name__ == "__main__":
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
         sensors.add(sensors.temperature, 1, "w")
+        print(type(sensors.temperature))
+        sensors.add(sensors.gps, 0.5, "w")
         sensors.stitch()
 
+        print(sensors.least)
+        time.sleep(2 * sensors.least)
+        
         while True:
             sensors.write()
             sensors.print()
+            
             time.sleep(1)
