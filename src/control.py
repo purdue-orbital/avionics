@@ -1,6 +1,6 @@
 import sys, os
 import time
-import json
+import json, math
 import queue
 from math import atan, pi
 import RPi.GPIO as GPIO
@@ -23,7 +23,7 @@ class Control:
         json["Stabilization"] = 0
         return json
 
-    def __init__(self,qdmpin,ignitionpin,rocketlogpin,stabilizationpin,error):
+    def __init__(self, qdmpin, ignitionpin, rocketlogpin, stabilizationpin):
         self.qdmpin = qdmpin
         self.ignitionpin = ignitionpin
         self.rocketlogpin = rocketlogpin
@@ -37,8 +37,6 @@ class Control:
         GPIO.setup(rocketlogpin,GPIO.OUT)
         GPIO.output(rocketlogpin,True)
         GPIO.setup(stabilizationpin,GPIO.OUT)
-
-        self.error = error
         
         self.balloon = None
         # self.rocket = None
@@ -66,7 +64,6 @@ class Control:
             data = self.generate_status_json()
             data["QDM"] = 1
             self.c.send(data, "status")
-            # self.radio.send(json.dumps({"QDM": "Activated"}))
         
         return 0
 
@@ -118,47 +115,28 @@ class Control:
         
         return none
         '''
-        lon = balloon['GPS']['long']
-        lat = balloon['GPS']['lat']
-
         alt = balloon['alt']
 
         gx = balloon['gyro']['x']
         gy = balloon['gyro']['y']
         gz = balloon['gyro']['z']
-        
-        mx = balloon['mag']['x']
-        my = balloon['mag']['y']
-        mz = balloon['mag']['z']
 
-        temp = balloon['temp']
-
-        ax = balloon['acc']['x']
-        ay = balloon['acc']['y']
-        az = balloon['acc']['z']
-
-        self.balloon = [alt, lon, lat, gx, gy, gz, mx, my, mz, temp, ax, ay, az]
+        self.balloon = [alt, gx, gy, gz]
 
     def launch_condition(self):
         '''
         This check Launch condition
         
         return result: launch condition true or false
-
         '''
         
         altitude = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
-        spinrate = (self.balloon[3]<=5) & (self.balloon[4]<=5) & (self.balloon[5]<=5)
-        degree = atan(self.balloon[7]/self.balloon[6]) * 180/pi
-        direction = (degree <= 100) & (degree >= 80)
-            
-        return (altitude & spinrate & direction)
+        spinrate = (math.sqrt(self.balloon[3]**2 + self.balloon[4]**2 + self.balloon[5]**2) <= 5)
+
+        return (altitude & spinrate)
 
     def connection_check(self):
-
-        connected = self.radio.remote_device
-            
-        return connected
+        return self.radio.remote_device
 
     def stabilization(self,manager):
         self.read_data(manager)

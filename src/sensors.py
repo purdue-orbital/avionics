@@ -37,10 +37,11 @@ class Sensors:
             freq: frequency with which to call function
             args: any arguments to the function
         """
-        def __init__(self, name, freq, args):
+        def __init__(self, name, freq, identity, args):
             self.name = name
             self.freq = freq
             self.args = args
+            self.id = identity
             self.next = None
 
     class SLL:
@@ -155,7 +156,10 @@ class Sensors:
         string = []
         
         while head is not None:
-            string.append(",".join([str(x) for x in head.name()]))
+            if head.id is not None:
+                data = head.name()
+                self.json[head.id] = {list(self.json[head.id].keys())[i]: data[i] for i in range(len(data))}
+                string.append(",".join([str(x) for x in data]))
             head = head.next
 
         self.log.write(",".join(string) + "\n")
@@ -168,23 +172,25 @@ class Sensors:
         string = []
         
         while head is not None:
-            string.append(",".join([str(x) for x in head.name()]))
+            if head.id is not None:
+                string.append(",".join([str(x) for x in head.name()]))
             head = head.next
 
         print(",".join(string))
 
-    def pass_to(self, manager):
+    def pass_to(self, manager, *args):
         """
         Writes most recent data to a shared dictionary w/ command thread
 
         Args:
             manager: A Manager() dictionary object passed through by balloon.py
+            *args: head name of data to be passed
         """
         # This is straight up cancerous, but the way dict management works between
         # processes requires the dictionary to be reassigned to notify the DictProxy
         # of changes to itself
         temp = manager[0]
-        temp = self.json
+        temp = {k: v for k, v in self.json.items() if k in args} # Prune keys
         # Reassign here
         manager[0] = temp
 
@@ -192,17 +198,9 @@ class Sensors:
         """
         Sends most recent data collected over radio
         """
-        # Assigning each sensor value required to dictionary
-        
-        self.json["GPS"]["lat"], self.json["GPS"]["long"], self.json["alt"] = self.gps
-        self.json["gyro"]["x"], self.json["gyro"]["y"], self.json["gyro"]["z"] = self.gyro
-        self.json["mag"]["x"], self.json["mag"]["y"], self.json["mag"]["z"] = self.magnet
-        self.json["acc"]["x"], self.json["acc"]["y"], self.json["acc"]["z"] = self.accel
-        self.json["temp"] = self.temperature
-
         self.c.send(self.json, "balloon")
 
-    def add(self, name, freq, args=None):
+    def add(self, name, freq, identity=None, args=None):
         """
         Calls inner function SLL.add(node)
         Arguments:
@@ -210,7 +208,7 @@ class Sensors:
             freq: frequency with which to call function
             args: any arguments to the function
         """
-        self.list.add(self.Function(name, freq, args))
+        self.list.add(self.Function(name, freq, identity, args))
 
     @property
     def least(self):
@@ -226,23 +224,19 @@ class Sensors:
 
         return max
 
-    def caller(self, function, hz, *args, **kwargs):
+    @property
+    def greatest(self):
         """
-        Calls a function at a defined frequency (used for polling).
-        Arguments:
-            function: function you want to call
-            hz: frequency (in Hz) to call function
-            *args: any arguments you want passed to the function
-            **kwargs: keyword arguments you want passed to the function
+        Finds most frequently polled sensor
         """
-        start = self.clock.time
-        print(start)
-        while True:
-            if (self.clock.time > (start + 1/hz)):
-                print("Enter %f", self.clock.time)
-                function(*args, **kwargs)
-                start = self.clock.time
-            else: time.sleep(1/hz)
+        head = self.list.head
+        min = head.freq
+        
+        while head is not None:
+            if (head.freq < min): min = head.freq
+            head = head.next
+
+        return min
 
     def stitch(self):
         """
@@ -250,6 +244,14 @@ class Sensors:
         Arguments:
             head: Function() object which is first sensor in list
         """
+        head = self.list.head
+
+        while head is not None:
+            if head.id is not None:  # Instantiate data values
+                head.name(head.args)
+            
+            head = head.next
+
         head = self.list.head
 
         while head is not None:
@@ -313,7 +315,7 @@ class Sensors:
         """
         Reads temperature data from the MS5611 chip
         """
-        if not args: return self._temperature
+        if not args: return (self._temperature,)
         elif (args[0] == "w"):
             try:
                 self._temperature = self.clock.temp
@@ -341,16 +343,16 @@ if __name__ == "__main__":
 
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
-        sensors.add(sensors.temperature, 1, "w")
-        print(type(sensors.temperature))
-        sensors.add(sensors.gps, 0.5, "w")
-        sensors.stitch()
+        sensors.add(sensors.temperature, 1, identity="temp", args=["w"])
+        sensors.add(sensors.gps, 0.5, identity="GPS", args=["w"])
 
-        print(sensors.least)
+        ### DON'T CHANGE ###
+        sensors.add(sensors.write, sensors.greatest)
+        sensors.stitch()
         time.sleep(2 * sensors.least)
+        ### DON'T CHANGE ###
         
         while True:
-            sensors.write()
             sensors.print()
             
             time.sleep(1)
