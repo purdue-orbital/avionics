@@ -29,6 +29,8 @@ class Control:
         self.rocketlogpin = rocketlogpin
         self.stabilizationpin = stabilizationpin
 
+        self.gyro_queue = queue.Queue(maxsize=100)
+
         # GPIO SETUP
         GPIO.setmode(GPIO.BCM)
         
@@ -120,6 +122,11 @@ class Control:
         gx = balloon['gyro']['x']
         gy = balloon['gyro']['y']
         gz = balloon['gyro']['z']
+
+        if (self.gyro_queue.full()): 
+            self.gyro_queue.get()
+            
+        self.gyro_queue.put([gx, gy, gz])
 
         self.balloon = [alt, gx, gy, gz]
 
