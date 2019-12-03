@@ -68,8 +68,8 @@ class MPU9250(I2CDevice):
 
         # all 3 are set to 16b or 14b readings, we have take half, so one bit is
         # removed 16 -> 15 or 13 -> 14
-        self.alsb = 2 / 2**15
-        self.glsb = 250 / 2**15
+        self.alsb = 2 / ~(1<<16)	#Previously was 2**15, which would ignore the first
+        self.glsb = 250 / ~(1<<16)	#14 bits instead of just ignoring the 16th bit
 
     def read16(self, register):
         data = self.read_block(register, 2)
@@ -86,9 +86,10 @@ class MPU9250(I2CDevice):
         # for i in range(6):
         #       data.append(self.read8(address, register + i))
 
-        x = self.conv(data[0], data[1]) * lsb
-        y = self.conv(data[2], data[3]) * lsb
-        z = self.conv(data[4], data[5]) * lsb
+		
+        x = self.conv(data[0], data[1]) * lsb	#lsb denotes the accuracy in degrees
+		y = self.conv(data[2], data[3]) * lsb	#in this case, lsb is 250 / ~(1<<16) (was 2**15)
+        z = self.conv(data[4], data[5]) * lsb	#or 250dps accuracy stored in 15 bits
 
         # print('>> data', data)
         # ans = self.convv.unpack(*data)
@@ -99,9 +100,6 @@ class MPU9250(I2CDevice):
         return (x, y, z)
 
     def conv(self, msb, lsb):
-        """
-        http://stackoverflow.com/questions/26641664/twos-complement-of-hex-number-in-python
-        """
         value = (msb << 8) | lsb
         print(f"msb: {msb}")
         if (value>>15):
