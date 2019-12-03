@@ -156,5 +156,4 @@ class Control:
 
     def receive_data(self):
         self.commands.put(json.loads(self.c.receive()))
-        if not self.commands.empty():
-            return self.commands.get()
+        
