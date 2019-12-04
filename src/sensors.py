@@ -23,25 +23,26 @@ class Sensors:
     Arguments:
         name       : String ID for sensor package
         imu_address: i2c address of MPU9250 and MS5611
-        gps_port   : Port of serial object GPS NEO 7M
         radio_port : if not None, port of radio for ground station communication
                             else, radio isn't used
-        clock_pin  : GPIO pin the SQW line from the DS3231 is connected to
     """
 
     class Function:
         """
         List node for functions to be called
         Arguments:
-            name: function name to be called
-            freq: frequency with which to call function
-            args: any arguments to the function
+            name : function name to be called
+            freq : frequency with which to call function
+            id   : string for json key
+            token: column header for logging purposes
+            args : any arguments to the function
         """
-        def __init__(self, name, freq, identity, args):
+        def __init__(self, name, freq, identity, token, args):
             self.name = name
             self.freq = freq
-            self.args = args
             self.id = identity
+            self.token = token
+            self.args = args
             self.next = None
 
     class SLL:
@@ -52,10 +53,13 @@ class Sensors:
             self.head = None
         
         def add(self, node):
+            if node.id is not None:  # Initialize sensors
+                node.name(node.args)
+
             node.next = self.head
             self.head = node
 
-    def __init__(self, name, imu_address=0x69, gps_port='/dev/ttyAMA0', radio_port=None):
+    def __init__(self, name, imu_address=0x69, radio_port=None):
         # Set up debug logging
         self.console = logging.getLogger('sensors')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
@@ -77,10 +81,10 @@ class Sensors:
         self.name = name
         self.json = {
                       "origin": name,
-                      "alt": 0,
                       "GPS": {
                         "long": 0,
-                        "lat": 0
+                        "lat": 0,
+                        "alt": 0
                       },
                       "gyro": {
                         "x": 0,
@@ -102,16 +106,13 @@ class Sensors:
 
         # Open log file and write header
         self.log = open('../logs/data.log', 'a+')
-        self.log.write(
-            'time (s),alt (m),lat,long,a_x (g),a_y (g),a_z (g),g_x (dps),g_y (dps),g_z (dps),m_x (mT),m_y (mT),'
-            'm_z (mT),temp (C)\n'
-        )
 
         # Initialize sensor Modules
         try: self.clock = DS3231("DS3231", clock_pin)
         except:
             self.console.warning("DS3231 not initialized")
-            self.clock = time
+            self.clock = None
+            self.start_time = time.time()
             self.console.info("Using system clock")
         try: self.imu = MPU9250("MPU9250", mpu_address=imu_address)
         except: self.console.warning("MPU9250 not initialized")
@@ -144,9 +145,25 @@ class Sensors:
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
         GPIO.cleanup()
     
-    #callback function for the rocketIn pin
     def launch_detect(self, callback):
-        logging.info(f"Launch detected at mission time {self.clock.time}")
+        """
+        Callback function for the rocket_in pin
+        """
+        logging.info(f"Launch detected at mission time {self.time[0]}")
+
+    def write_header(self):
+        """
+        Writes header for specified sensors to log file
+        """
+        head = self.list.head
+        string = []
+
+        while head is not None:
+            if head.token is not None:  # Any data-writing function will have a token
+                string.append(head.token)
+            head = head.next
+
+        self.log.write(",".join(string) + "\n")
         
     def write(self):
         """
@@ -156,9 +173,10 @@ class Sensors:
         string = []
         
         while head is not None:
-            if head.id is not None:
+            if head.token is not None:  # Any data-writing function will have a token
                 data = head.name()
-                self.json[head.id] = {list(self.json[head.id].keys())[i]: data[i] for i in range(len(data))}
+                if head.id is not None:  # If data is being sent over radio, will have an ID
+                    self.json[head.id] = {list(self.json[head.id].keys())[i]: data[i] for i in range(len(data))}
                 string.append(",".join([str(x) for x in data]))
             head = head.next
 
@@ -200,7 +218,7 @@ class Sensors:
         """
         self.c.send(self.json, "balloon")
 
-    def add(self, name, freq, identity=None, args=None):
+    def add(self, name, freq, identity=None, token=None, args=None):
         """
         Calls inner function SLL.add(node)
         Arguments:
@@ -208,7 +226,7 @@ class Sensors:
             freq: frequency with which to call function
             args: any arguments to the function
         """
-        self.list.add(self.Function(name, freq, identity, args))
+        self.list.add(self.Function(name, freq, identity, token, args))
 
     @property
     def least(self):
@@ -247,14 +265,6 @@ class Sensors:
         head = self.list.head
 
         while head is not None:
-            if head.id is not None:  # Instantiate data values
-                head.name(head.args)
-            
-            head = head.next
-
-        head = self.list.head
-
-        while head is not None:
             if head.args is not None:
                 t = threading.Timer(head.freq, head.name, args=head.args)
             else: t = threading.Timer(head.freq, head.name)
@@ -262,6 +272,14 @@ class Sensors:
             t.daemon = True
             t.start()
             head = head.next
+
+    def time(self):
+        """
+        Reads time from the DS3231 RTC
+        """
+        if self.clock is not None:
+            return (self.clock.time,)
+        else: return (time.time() - self.start_time,)
 
     def gps(self, *args):
         """
@@ -323,36 +341,35 @@ class Sensors:
                 self.console.error(e)
                 self._temperature = -999
                 
-    def speed_test(self, dur):
+    def speed_test(self, duration, function, *args):
         """
-        Tests the speed of data acquisition from sensors for a given time.
+        Tests the speed of data acquisition from a function for a given time.
         Arguments:
-            dur: duration (in seconds) of test
+            duration: duration (in seconds) of test
         """
-        start = self.clock.time
+        start = self.time[0]
         i = 0
 
-        while self.clock.time < start + dur:
-            self.write()
+        while self.time[0] < start + duration:
+            function(*args)
             i = i + 1
-        print("\nPolling rate: {} Hz\n".format(i / dur))
+        print("\nPolling rate: {} Hz\n".format(i / duration))
 
 
 if __name__ == "__main__":
-    print("Running sensors.py ...\n")
-
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
-        sensors.add(sensors.temperature, 1, identity="temp", args=["w"])
-        sensors.add(sensors.gps, 0.5, identity="GPS", args=["w"])
+        sensors.add(sensors.temperature, 1, identity="temp", token="temp (C)", args=["w"])
+        sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
 
         ### DON'T CHANGE ###
+        sensors.add(sensors.time, sensors.greatest, token="time (s)")
+        sensors.write_header()
         sensors.add(sensors.write, sensors.greatest)
         sensors.stitch()
-        time.sleep(2 * sensors.least)
+        # time.sleep(2 * sensors.least)
         ### DON'T CHANGE ###
         
         while True:
             sensors.print()
-            
             time.sleep(1)
