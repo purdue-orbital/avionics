@@ -342,6 +342,7 @@ if __name__ == "__main__":
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
         sensors.add(sensors.temperature, 1, "w")
+        sensors.add(sensors.gyro, 1, "w")
         print(type(sensors.temperature))
         sensors.add(sensors.gps, 0.5, "w")
         sensors.stitch()

@@ -47,7 +47,7 @@ class DS3231(I2CDevice):
         msb = self.read(TEMP_REGISTER)
         lsb = self.read(TEMP_REGISTER + 1)
         self.temp = msb + (lsb >> 6) * 0.25
-        return (self._temp, )
+        return self._temp
 
     @temp.setter
     def temp(self, value):
