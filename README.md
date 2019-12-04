@@ -12,7 +12,7 @@ This is the GitHub repository for all software pertaining to Purdue Orbital's *H
 
 Currently, there are two flight computers -- both RPi Model 3 B+. Connection can either be local, or over `PAL3.0` using ethernet. 
 
-//NOTE: Currently, WiFi is not configured for these Pis, so this method isn't functional.
+**NOTE: Currently, WiFi is not configured for these Pis, so they must be connected to `PAL3.0` over ethernet.**
 
 To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Windows users can also use the command prompt. On the Pi, type `ifconfig | grep 'inet '`. The output should look something like:
 

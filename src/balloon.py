@@ -4,24 +4,32 @@ from sensors import Sensors
 from control import Control
 from time import sleep
 
-
-def dataProc(d):
+def dataProc(lproxy):
     """
-    Main process for data_aggr.py
+    Main process for sensors.py
     Initializes sensor package module and passes data to the RadioModule
     (and comm_parse.py using a Manager())
     """
 
-    print("Running data_aggr.py ...\n")
-    sens = Sensors("Balloon Computer")
+    print("Running sensors.py ...\n")
 
-    while True:
-        sens.read_all()  # send every data point to radio/command? Bad idea
-        sens.send()
-        sens.pass_to(d)
+    with Sensors("balloon") as sensors:
+        # Launch thread in write mode so it doesn't just read
+        sensors.add(sensors.temperature, 1, ["w",])
+        sensors.add(sensors.gps, 0.5, ["w",])
+        sensors.add(sensors.pass_to, 1, [lproxy, "alt", "gyro",])
+        sensors.stitch()
 
+        print(sensors.least)
+        sleep(2 * sensors.least)  # Wait enough time for sensors to log
+        
+        while True:
+            sensors.write()
+            sensors.print()
+            
+            sleep(1)
 
-def commProc(d):
+def commProc(lproxy):
     """
     Controls all command processes for the balloon flight computer. Gets data
     from dataProc using a DictProxy managed by Manager() in main.
@@ -29,8 +37,9 @@ def commProc(d):
 
     print("Running comm_parse.py ...\n")
 
-    ctrl = Control(5, 6, rocketlogpin, 13, 0.05) #rocketlogpin currently undefined
-    #pin number 13 = stabilization pin
+    ctrl = Control(5, 6, 22, 13, 0.05) #rocketlogpin currently undefined
+    # pin 13 = stabilization pin
+    # pin 22 = rocket out pin
 
     mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
 
@@ -49,9 +58,9 @@ def commProc(d):
             if (CType == 'QDM'):
                 ctrl.QDMCheck(0)
             if (CType == 'Stabilize'):
-                ctrl.Stabilization(d)
+                ctrl.Stabilization(lproxy)
             if (CType == 'Ignition'):
-                ctrl.Ignition(mode,d)
+                ctrl.Ignition(mode, lproxy)
 
         ## NEED CHANGES ###
         #rocket = d
@@ -75,11 +84,11 @@ if __name__ == "__main__":
 
         # Assign each function to a Process
         data = Process(target=dataProc, args=(lproxy,))
-        # comm = Process(target=commProc, args=(lproxy,))
+        comm = Process(target=commProc, args=(lproxy,))
 
         # Start processes
         data.start()
-        # comm.start()
+        comm.start()
         # Wait in main so that this can be escaped properly with ctrl+c
         while True:
             sleep(10)
@@ -87,5 +96,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:  # Catch interrupts (terminates correctly)
         print("Ending processes...")
         data.terminate()
-        # comm.terminate()
+        comm.terminate()
         print("Processes terminated.\n")

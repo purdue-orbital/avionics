@@ -18,8 +18,8 @@ class I2CDevice:
     def read_block(self, register, num):
         data = []
         for i in range(0, num):
-            data[i] = self.read(register + i)
-
+            data.append(self.read(register + i))
+            
         return data
     
     def write(self, register, data):
