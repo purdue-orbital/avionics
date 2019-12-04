@@ -30,6 +30,8 @@ class Control:
         self.rocketlogpin = rocketlogpin
         self.stabilizationpin = stabilizationpin
 
+        self.gyro_queue = queue.Queue(maxsize=100)
+
         # GPIO SETUP
         GPIO.setmode(GPIO.BCM)
 
@@ -101,7 +103,7 @@ class Control:
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.rocketlogpin,False)
                 GPIO.output(self.ignitionpin,False)
-                logging.info("rocket ignition (testing)")
+                logging.info("Rocket ignition (testing)")
             elif (mode == 2):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
@@ -112,7 +114,7 @@ class Control:
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
                 GPIO.output(self.rocketlogpin,False)
                 GPIO.output(self.ignitionpin,False)
-                logging.info("rocket ignition")
+                logging.info("Rocket ignition")
 
         return 0
 
@@ -132,8 +134,13 @@ class Control:
         gy = balloon['gyro']['y']
         gz = balloon['gyro']['z']
 
+        if (self.gyro_queue.full()): 
+            self.gyro_queue.get()
+            
+        self.gyro_queue.put([gx, gy, gz])
+
         self.balloon = [alt, gx, gy, gz]
-        logging.debug("data received ")
+        logging.debug("Data received")
 
     def launch_condition(self):
         '''
@@ -144,7 +151,7 @@ class Control:
 
         altitude = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
         spinrate = (math.sqrt(self.balloon[3]**2 + self.balloon[4]**2 + self.balloon[5]**2) <= 5)
-        logging.info(f"altitude: {altitude} - spinrate: {spinrate}")
+        logging.info(f"Altitude: {altitude} - Spinrate: {spinrate}")
 
         return (altitude & spinrate)
 
@@ -159,7 +166,7 @@ class Control:
             data = self.generate_status_json()
             data["Stabilization"] = 1
             self.c.send(data,"status")
-            logging.info("Stabilizing balloon")
+            logging.info("Stabilization initiated")
 
     def receive_data(self):
         self.commands.put(json.loads(self.c.receive()))

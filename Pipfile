@@ -11,6 +11,7 @@ smbus = "*"
 gpsd-py3 = "*"
 digi-xbee = "*"
 mode = "*"
+rpi.gpio = "*"
 
 [requires]
 python_version = "3.7"
