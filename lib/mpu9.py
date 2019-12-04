@@ -88,7 +88,7 @@ class MPU9250(I2CDevice):
 
 		
         x = self.conv(data[0], data[1]) * lsb	#lsb denotes the accuracy in degrees
-		y = self.conv(data[2], data[3]) * lsb	#in this case, lsb is 250 / ~(1<<16) (was 2**15)
+        y = self.conv(data[2], data[3]) * lsb	#in this case, lsb is 250 / ~(1<<16) (was 2**15)
         z = self.conv(data[4], data[5]) * lsb	#or 250dps accuracy stored in 15 bits
 
         # print('>> data', data)
@@ -101,9 +101,8 @@ class MPU9250(I2CDevice):
 
     def conv(self, msb, lsb):
         value = (msb << 8) | lsb
-        print(f"msb: {msb}")
         if (value>>15):
-            return -(value - (1<<16))
+            return (value - (1<<16))
         return value
 
     @property
