@@ -94,7 +94,7 @@ done
 
 echo "Attempting to run ${FILE}${program_path}${program}${NC}"
 
-sudo pipenv run python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
+sudo python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
 if [[ $? == '1' ]]
 then
     traceback=$( tail -1 ${local_path}${traceback_path})

@@ -10,15 +10,12 @@ if [[ $1 = "-i" ]] || [[ $1 = "--install" ]];then
     echo "Installing dependencies..."
     echo
     sudo apt install rpi.gpio gpsd gpsd-clients python3-pip
-    sudo pip3 install pipenv
+    sudo pip3 install -r requirements.txt
 
 # Remove dependencies
 elif [[ $1 = "-r" ]] || [[ $1 = "--remove" ]];then
-    echo "Uninstalling dependencies..."
+    echo "${INFO}[INFO]${NC} pip3 dependencies must be uninstalled manually."
     echo
-    sudo pipenv uninstall --all
-    sudo pipenv --rm
-    sudo pip3 uninstall pipenv -y
     
 # Help message
 elif [[ $1 = "-h" ]] || [[ $1 = "--help" ]];then
