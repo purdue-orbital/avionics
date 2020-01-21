@@ -62,8 +62,14 @@ class Sensors:
             self.head = node
 
     class IntThread(Thread):
+        """
+        Spawn a Thread to repeat at a given interval
+        Arguments:
+            obj : a Function object to be executed
+        """
         def __init__(self, obj):
             Thread.__init__(self, daemon=True)
+            # Could be used to prematurely stop thread using self.trigger.set()
             self.trigger = Event()
             self.obj = obj
 
@@ -363,24 +369,29 @@ class Sensors:
 
 if __name__ == "__main__":
     with Sensors("balloon") as sensors:
-        # Launch thread in write mode so it doesn't just read
-        temp_write = lambda: sensors.temperature(write=True)
-        temp_read = lambda: sensors.temperature()
-        sensors.add(temp_write, 1, identity="temp", token="temp (C)", access=temp_read)
-        # sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
-        acc_write = lambda: sensors.accel(write=True)
-        acc_read = lambda: sensors.accel()
-        sensors.add(acc_write, 1, identity="acc", token="ax (g),ay (g),az (g)", access=acc_read)
-        gyro_write = lambda: sensors.gyro(write=True)
-        gyro_read = lambda: sensors.gyro()
-        sensors.add(gyro_write, 2, identity="gyro", token="gx (dps),gy (dps),gz (dps)", access=gyro_read)
+        # Lambda used to pass generic multi-arg functions to sensors.add
+        # These will later be executed in unique threads
+        sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
+            token="temp (C)", access=lambda: sensors.temperature()
+        )
+
+        # sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
+        #     token="lat, long, alt (m)", access=sensors.gps()
+        # )
+
+        sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
+            token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+        )
+
+        sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
+            token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+        )
         
         ### DON'T CHANGE ###
-        sensors.add(sensors.time, sensors.greatest, token="time (s)")
+        sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
         sensors.write_header()
-        sensors.add(sensors.write, sensors.greatest)
+        sensors.add(lambda: sensors.write(), sensors.greatest)
         sensors.stitch()
-        # time.sleep(2 * sensors.least)
         ### DON'T CHANGE ###
         
         while True:
