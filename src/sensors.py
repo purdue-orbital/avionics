@@ -1,7 +1,7 @@
 import sys, os
 import json
 import time
-import threading
+from threading import Thread, Event
 import logging
 import RPi.GPIO as GPIO
 
@@ -59,6 +59,17 @@ class Sensors:
             node.next = self.head
             self.head = node
 
+    class IntThread(Thread):
+        def __init__(self, obj):
+            Thread.__init__(self, daemon=True)
+            self.trigger = Event()
+            self.obj = obj
+
+        def run(self):
+            while not self.trigger.wait(1 / self.obj.freq):
+                if self.obj.args is not None: self.obj.name(self.obj.args)
+                else: self.obj.name()
+            
     def __init__(self, name, imu_address=0x69, radio_port=None):
         # Set up debug logging
         self.console = logging.getLogger('sensors')
@@ -142,8 +153,12 @@ class Sensors:
         return self
         
     def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Specify cleanup procedure. Protects against most crashes
+        """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
         GPIO.cleanup()
+        self.log.close()
     
     def launch_detect(self, callback):
         """
@@ -161,7 +176,6 @@ class Sensors:
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
                 string.append(head.token)
-                head.name(head.args)
             head = head.next
 
         self.log.write(",".join(string) + "\n")
@@ -177,7 +191,11 @@ class Sensors:
             if head.token is not None:  # Any data-writing function will have a token
                 data = head.name()
                 if head.id is not None:  # If data is being sent over radio, will have an ID
-                    self.json[head.id] = {list(self.json[head.id].keys())[i]: data[i] for i in range(len(data))}
+                    sub = self.json[head.id]
+                    if type(data) is dict:
+                        sub = {list(sub.keys())[i]: data[i] for i in range(len(data))}
+                    else:  # case of temperature, only has one variable
+                        sub = data[0]
                 string.append(",".join([str(x) for x in data]))
             head = head.next
 
@@ -235,20 +253,6 @@ class Sensors:
         Finds least frequently polled sensor
         """
         head = self.list.head
-        max = head.freq
-        
-        while head is not None:
-            if (head.freq > max): max = head.freq
-            head = head.next
-
-        return max
-
-    @property
-    def greatest(self):
-        """
-        Finds most frequently polled sensor
-        """
-        head = self.list.head
         min = head.freq
         
         while head is not None:
@@ -256,6 +260,20 @@ class Sensors:
             head = head.next
 
         return min
+
+    @property
+    def greatest(self):
+        """
+        Finds most frequently polled sensor
+        """
+        head = self.list.head
+        max = head.freq
+        
+        while head is not None:
+            if (head.freq > max): max = head.freq
+            head = head.next
+
+        return max
 
     def stitch(self):
         """
@@ -266,12 +284,11 @@ class Sensors:
         head = self.list.head
 
         while head is not None:
-            if head.args is not None:
-                t = threading.Timer(head.freq, head.name, args=head.args)
-            else: t = threading.Timer(head.freq, head.name)
-
-            t.daemon = True
+            # print(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
+            self.console.info(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
+            t = self.IntThread(head)
             t.start()
+            
             head = head.next
 
     def time(self):
@@ -287,7 +304,7 @@ class Sensors:
         Reads positional GPS data from the NEO7M chip
         """
         if not args: return self._gps
-        elif (args[0] == "w"):
+        elif (args[0][0] == "w"):
             try:
                 self._gps = self.neo.position
             except Exception as e:
@@ -299,7 +316,7 @@ class Sensors:
         Reads acceleration from the MPU9250 chip
         """
         if not args: return self._accel
-        elif (args[0] == "w"):
+        elif (args[0][0] == "w"):
             try:
                 self._accel = self.imu.accel
             except Exception as e:
@@ -311,7 +328,7 @@ class Sensors:
         Reads gyroscopic data from the MPU9250 chip
         """
         if not args: return self._gyro
-        elif (args[0] == "w"):
+        elif (args[0][0] == "w"):
             try:
                 self._gyro = self.imu.gyro
             except Exception as e:
@@ -323,7 +340,7 @@ class Sensors:
         Read magnetometer data from the MPU9250 chip
         """
         if not args: return self._magnet
-        elif (args[0] == "w"):
+        elif (args[0][0] == "w"):
             try:
                 self._magnet = self.ak.mag
             except Exception as e:
@@ -335,12 +352,12 @@ class Sensors:
         Reads temperature data from the MS5611 chip
         """
         if not args: return (self._temperature,)
-        elif (args[0] == "w"):
+        elif (args[0][0] == "w"):
             try:
                 self._temperature = self.clock.temp
             except Exception as e:
                 self.console.error(e)
-                self._temperature = -999
+                self._temperature = (-999,)
                 
     def speed_test(self, duration, function, *args):
         """
@@ -361,8 +378,10 @@ if __name__ == "__main__":
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
         sensors.add(sensors.temperature, 1, identity="temp", token="temp (C)", args=["w"])
-        sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
-
+        # sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
+        sensors.add(sensors.accel, 1, identity="acc", token="ax (g),ay (g),az (g)", args=["w"])
+        sensors.add(sensors.gyro, 2, identity="gyro", token="gx (dps),gy (dps),gz (dps)", args=["w"])
+        
         ### DON'T CHANGE ###
         sensors.add(sensors.time, sensors.greatest, token="time (s)")
         sensors.write_header()

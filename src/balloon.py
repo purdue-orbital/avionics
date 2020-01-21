@@ -15,19 +15,24 @@ def dataProc(lproxy):
 
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
-        sensors.add(sensors.temperature, 1, ["w",])
-        sensors.add(sensors.gps, 0.5, ["w",])
-        sensors.add(sensors.pass_to, 1, [lproxy, "alt", "gyro",])
+        sensors.add(sensors.temperature, 1, identity="temp", token="temp (C)", args=["w"])
+        # sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
+        sensors.add(sensors.accel, 1, identity="acc", token="ax (g),ay (g),az (g)", args=["w"])
+        sensors.add(sensors.gyro, 2, identity="gyro", token="gx (dps),gy (dps),gz (dps)", args=["w"])
+        sensors.add(sensors.pass_to, 1, args=[lproxy, "alt", "gyro",])
+        
+        ### DON'T CHANGE ###
+        sensors.add(sensors.time, sensors.greatest, token="time (s)")
+        sensors.write_header()
+        sensors.add(sensors.write, sensors.greatest)
         sensors.stitch()
-
-        print(sensors.least)
-        sleep(2 * sensors.least)  # Wait enough time for sensors to log
+        # time.sleep(2 * sensors.least)
+        ### DON'T CHANGE ###
         
         while True:
-            sensors.write()
             sensors.print()
-            
             sleep(1)
+   
 
 def commProc(lproxy):
     """
@@ -35,7 +40,7 @@ def commProc(lproxy):
     from dataProc using a DictProxy managed by Manager() in main.
     """
 
-    print("Running comm_parse.py ...\n")
+    print("Running control.py ...\n")
 
     ctrl = Control(5, 6, 22, 13, 0.05) #rocketlogpin currently undefined
     # pin 13 = stabilization pin
@@ -84,11 +89,11 @@ if __name__ == "__main__":
 
         # Assign each function to a Process
         data = Process(target=dataProc, args=(lproxy,))
-        comm = Process(target=commProc, args=(lproxy,))
+        # comm = Process(target=commProc, args=(lproxy,))
 
         # Start processes
         data.start()
-        comm.start()
+        # comm.start()
         # Wait in main so that this can be escaped properly with ctrl+c
         while True:
             sleep(10)
@@ -96,5 +101,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:  # Catch interrupts (terminates correctly)
         print("Ending processes...")
         data.terminate()
-        comm.terminate()
+        # comm.terminate()
         print("Processes terminated.\n")
