@@ -14,19 +14,30 @@ def dataProc(lproxy):
     print("Running sensors.py ...\n")
 
     with Sensors("balloon") as sensors:
-        # Launch thread in write mode so it doesn't just read
-        sensors.add(sensors.temperature, 1, identity="temp", token="temp (C)", args=["w"])
-        # sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
-        sensors.add(sensors.accel, 1, identity="acc", token="ax (g),ay (g),az (g)", args=["w"])
-        sensors.add(sensors.gyro, 2, identity="gyro", token="gx (dps),gy (dps),gz (dps)", args=["w"])
-        sensors.add(sensors.pass_to, 1, args=[lproxy, "alt", "gyro",])
+        # Lambda used to pass generic multi-arg functions to sensors.add
+        # These will later be executed in unique threads
+        sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
+            token="temp (C)", access=lambda: sensors.temperature()
+        )
+
+        sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
+            token="lat, long, alt (m)", access=lambda: sensors.gps()
+        )
+
+        sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
+            token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+        )
+
+        sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
+            token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+        )
+        sensors.add(lambda: sensors.pass_to(lproxy, "alt", "gyro"), 1)
         
         ### DON'T CHANGE ###
-        sensors.add(sensors.time, sensors.greatest, token="time (s)")
+        sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
         sensors.write_header()
-        sensors.add(sensors.write, sensors.greatest)
+        sensors.add(lambda: sensors.write(), sensors.greatest)
         sensors.stitch()
-        # time.sleep(2 * sensors.least)
         ### DON'T CHANGE ###
         
         while True:

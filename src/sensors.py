@@ -56,7 +56,7 @@ class Sensors:
         
         def add(self, node):
             if node.id is not None:  # Initialize sensors
-                node.perform
+                node.perform()
 
             node.next = self.head
             self.head = node
@@ -75,7 +75,7 @@ class Sensors:
 
         def run(self):
             while not self.trigger.wait(1 / self.obj.freq):
-                self.obj.perform
+                self.obj.perform()
             
     def __init__(self, name, imu_address=0x69, radio_port=None):
         # Set up debug logging
@@ -88,7 +88,6 @@ class Sensors:
         self.console.info(f"\n\n### Starting {name} ###\n")
 
         rocket_in = 27
-        clock_pin = 17
 
         #on init, setup the rocket input pin and its event handler
         GPIO.setmode(GPIO.BCM)
@@ -126,7 +125,7 @@ class Sensors:
         self.log = open('../logs/data.log', 'a+')
 
         # Initialize sensor Modules
-        try: self.clock = DS3231("DS3231", clock_pin)
+        try: self.clock = DS3231("DS3231")
         except:
             self.console.warning("DS3231 not initialized")
             self.clock = None
@@ -196,7 +195,7 @@ class Sensors:
         
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
-                data = head.access
+                data = head.access()
                 if head.id is not None:  # If data is being sent over radio, will have an ID
                     sub = self.json[head.id]
                     if type(data) is dict:
@@ -216,8 +215,8 @@ class Sensors:
         string = []
         
         while head is not None:
-            if head.id is not None:
-                string.append(",".join([str(x) for x in head.access]))
+            if head.token is not None:  # Anything with a header
+                string.append(",".join([str(x) for x in head.access()]))
             head = head.next
 
         print(",".join(string))
@@ -292,7 +291,7 @@ class Sensors:
 
         while head is not None:
             # print(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
-            self.console.info(f"Spawning thread {head.access.__name__} with frequency {head.freq} Hz...")
+            self.console.info(f"Spawning thread {head.id} with frequency {head.freq} Hz...")
             t = self.IntThread(head)
             t.start()
             
@@ -375,9 +374,9 @@ if __name__ == "__main__":
             token="temp (C)", access=lambda: sensors.temperature()
         )
 
-        # sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
-        #     token="lat, long, alt (m)", access=sensors.gps()
-        # )
+        sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
+            token="lat, long, alt (m)", access=lambda: sensors.gps()
+        )
 
         sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
             token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()

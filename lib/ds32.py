@@ -6,20 +6,20 @@ from time import sleep
 DS32_ADDRESS = 0x68
 CONTROL_REGISTER = 0x0e
 TEMP_REGISTER = 0x11
+CLOCK_PIN = 17
 
 class DS3231(I2CDevice):
     """
     Interface to the DS3231 RTC.
     """
     
-    def __init__(self, name, pin):
+    def __init__(self, name):
         super(DS3231, self).__init__(DS32_ADDRESS, name)
         self.time = 0
-        self.pin = pin
 
         GPIO.setmode(GPIO.BCM)
         # Set GPIO pin to read clock interrupt
-        GPIO.setup(self.pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(CLOCK_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         # Sets 1.024 kHz mode for square wave on SQW pin
         self.write(CONTROL_REGISTER, 0b01101000)
@@ -28,7 +28,7 @@ class DS3231(I2CDevice):
             raise ValueError("DS3231 mode not set correctly!")
         
         # Create read thread for INT pin (17)
-        GPIO.add_event_detect(self.pin, GPIO.RISING, callback=self.tick)
+        GPIO.add_event_detect(CLOCK_PIN, GPIO.RISING, callback=self.tick)
 
         
     def tick(self, channel):
@@ -58,7 +58,7 @@ class DS3231(I2CDevice):
 
         
 if __name__ == "__main__":    
-    clock = DS3231("DS3231", 17)
+    clock = DS3231("DS3231")
     
     try:
         while True:
