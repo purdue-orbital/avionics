@@ -161,6 +161,7 @@ class Sensors:
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
                 string.append(head.token)
+                head.name(head.args)
             head = head.next
 
         self.log.write(",".join(string) + "\n")
