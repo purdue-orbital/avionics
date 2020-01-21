@@ -31,18 +31,20 @@ class Sensors:
         """
         List node for functions to be called
         Arguments:
-            name : function name to be called
+            perform : function call to execute generically
+            access  : separate function call to read, if necessary
             freq : frequency with which to call function
             id   : string for json key
             token: column header for logging purposes
-            args : any arguments to the function
         """
-        def __init__(self, name, freq, identity, token, args):
-            self.name = name
+        def __init__(self, perform, access, freq, identity, token):
+            self.perform = perform
+            if access is None: self.access = perform
+            else: self.access = access
+
             self.freq = freq
             self.id = identity
             self.token = token
-            self.args = args
             self.next = None
 
     class SLL:
@@ -54,7 +56,7 @@ class Sensors:
         
         def add(self, node):
             if node.id is not None:  # Initialize sensors
-                node.name(node.args)
+                node.perform
 
             node.next = self.head
             self.head = node
@@ -67,8 +69,7 @@ class Sensors:
 
         def run(self):
             while not self.trigger.wait(1 / self.obj.freq):
-                if self.obj.args is not None: self.obj.name(self.obj.args)
-                else: self.obj.name()
+                self.obj.perform
             
     def __init__(self, name, imu_address=0x69, radio_port=None):
         # Set up debug logging
@@ -189,7 +190,7 @@ class Sensors:
         
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
-                data = head.name()
+                data = head.access
                 if head.id is not None:  # If data is being sent over radio, will have an ID
                     sub = self.json[head.id]
                     if type(data) is dict:
@@ -210,7 +211,7 @@ class Sensors:
         
         while head is not None:
             if head.id is not None:
-                string.append(",".join([str(x) for x in head.name()]))
+                string.append(",".join([str(x) for x in head.access]))
             head = head.next
 
         print(",".join(string))
@@ -237,7 +238,7 @@ class Sensors:
         """
         self.c.send(self.json, "balloon")
 
-    def add(self, name, freq, identity=None, token=None, args=None):
+    def add(self, perform, freq, identity=None, token=None, access=None):
         """
         Calls inner function SLL.add(node)
         Arguments:
@@ -245,7 +246,7 @@ class Sensors:
             freq: frequency with which to call function
             args: any arguments to the function
         """
-        self.list.add(self.Function(name, freq, identity, token, args))
+        self.list.add(self.Function(perform, access, freq, identity, token))
 
     @property
     def least(self):
@@ -285,7 +286,7 @@ class Sensors:
 
         while head is not None:
             # print(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
-            self.console.info(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
+            self.console.info(f"Spawning thread {head.access.__name__} with frequency {head.freq} Hz...")
             t = self.IntThread(head)
             t.start()
             
@@ -299,88 +300,80 @@ class Sensors:
             return (self.clock.time,)
         else: return (time.time() - self.start_time,)
 
-    def gps(self, *args):
+    def gps(self, write=False):
         """
         Reads positional GPS data from the NEO7M chip
         """
-        if not args: return self._gps
-        elif (args[0][0] == "w"):
+        if write:
             try:
                 self._gps = self.neo.position
             except Exception as e:
                 self.console.error(e)
                 self._gps = (-999, -999, -999)
+        else: return self._gps
         
-    def accel(self, *args):
+    def accel(self, write=False):
         """
         Reads acceleration from the MPU9250 chip
         """
-        if not args: return self._accel
-        elif (args[0][0] == "w"):
+        if write:
             try:
                 self._accel = self.imu.accel
             except Exception as e:
                 self.console.error(e)
                 self._accel = (-999, -999, -999)
+        else: return self._accel
 
-    def gyro(self, *args):
+    def gyro(self, write=False):
         """
         Reads gyroscopic data from the MPU9250 chip
         """
-        if not args: return self._gyro
-        elif (args[0][0] == "w"):
+        if write:
             try:
                 self._gyro = self.imu.gyro
             except Exception as e:
                 self.console.error(e)
                 self._gyro = (-999, -999, -999)
+        else: return self._gyro
                 
-    def magnet(self, *args):
+    def magnet(self, write=False):
         """
         Read magnetometer data from the MPU9250 chip
         """
-        if not args: return self._magnet
-        elif (args[0][0] == "w"):
+        if write:
             try:
                 self._magnet = self.ak.mag
             except Exception as e:
                 self.console.error(e)
                 self._magnet = (-999, -999, -999)
+        else: return self._magnet
         
-    def temperature(self, *args):
+    def temperature(self, write=False):
         """
         Reads temperature data from the MS5611 chip
         """
-        if not args: return (self._temperature,)
-        elif (args[0][0] == "w"):
+        if write:
             try:
                 self._temperature = self.clock.temp
             except Exception as e:
                 self.console.error(e)
                 self._temperature = (-999,)
-                
-    def speed_test(self, duration, function, *args):
-        """
-        Tests the speed of data acquisition from a function for a given time.
-        Arguments:
-            duration: duration (in seconds) of test
-        """
-        start = self.time[0]
-        i = 0
-
-        while self.time[0] < start + duration:
-            function(*args)
-            i = i + 1
-        print("\nPolling rate: {} Hz\n".format(i / duration))
+        else: return (self._temperature,)
 
 
 if __name__ == "__main__":
     with Sensors("balloon") as sensors:
         # Launch thread in write mode so it doesn't just read
-        sensors.add(sensors.temperature, 1, identity="temp", token="temp (C)", args=["w"])
+        temp_write = lambda: sensors.temperature(write=True)
+        temp_read = lambda: sensors.temperature()
+        sensors.add(temp_write, 1, identity="temp", token="temp (C)", access=temp_read)
         # sensors.add(sensors.gps, 0.5, identity="GPS", token="lat, long, alt (m)", args=["w"])
-        sensors.add(sensors.accel, 1, identity="acc", token="ax (g),ay (g),az (g)", args=["w"])
-        sensors.add(sensors.gyro, 2, identity="gyro", token="gx (dps),gy (dps),gz (dps)", args=["w"])
+        acc_write = lambda: sensors.accel(write=True)
+        acc_read = lambda: sensors.accel()
+        sensors.add(acc_write, 1, identity="acc", token="ax (g),ay (g),az (g)", access=acc_read)
+        gyro_write = lambda: sensors.gyro(write=True)
+        gyro_read = lambda: sensors.gyro()
+        sensors.add(gyro_write, 2, identity="gyro", token="gx (dps),gy (dps),gz (dps)", access=gyro_read)
         
         ### DON'T CHANGE ###
         sensors.add(sensors.time, sensors.greatest, token="time (s)")
