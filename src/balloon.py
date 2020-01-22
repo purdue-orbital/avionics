@@ -65,49 +65,44 @@ class ControlProcess(Process):
 
     def run(self):
         """
-        Controls all command processes for the balloon flight computer. Gets data
-        from dataProc using a DictProxy managed by Manager() in main.
-        """
+        Controls all command processes for the balloon flight computer.
         """
         print("Running control.py ...\n")
 
-        ctrl = Control(5, 6, 22, 13) #rocketlogpin currently undefined
-        # pin 13 = stabilization pin
-        # pin 22 = rocket out pin
+        with Control("balloon") as ctrl:
+            mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
-        mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
+            # Data collection needs to be running parallel to rest of program
+            collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
+            collect.start()
 
-        result = ctrl.connection_check()
-        endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
-        while ((result == None) & (datetime.now() < endT)):
-            result = ctrl.connection_check()
-        if result == 0:
-            ctrl.qdm_check(0)
-        else:
-            ctrl.receive_data()
-            while not ctrl.commands.empty():
-                GSDATA = ctrl.commands.get()
-    
-                CType = GSDATA['command']
-                if (CType == 'QDM'):
+            while True:
+                # Control loop to determine radio disconnection
+                result = ctrl.connection_check()
+                endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
+                while ((result == None) & (datetime.now() < endT)):
+                    result = ctrl.connection_check()
+                    sleep(0.5)  # Don't overload CPU
+
+                # These don't need to be parallel to the radio connection, since we won't
+                # be getting commands if the radio is down
+                if result == 0:
                     ctrl.qdm_check(0)
-                # Are ignition and stabilize same signal?
-                if (CType == 'Stabilize'):
-                    ctrl.stabilization()
-                if (CType == 'Ignition'):
-                    ctrl.ignition(mode)
+                else:
+                    # Receive commands and iterate through them
+                    ctrl.receive_data()
+                    while not ctrl.commands.empty():
+                        GSDATA = ctrl.commands.get()
 
-        ## NEED CHANGES ###
-        # rocket = d
-        # balloon = Manager
-            
-        # ctrl.readdata(d)
+                        CType = GSDATA['command']
+                        if (CType == 'QDM'):
+                            ctrl.qdm_check(0)
+                        # Are ignition and stabilize same signal?
+                        if (CType == 'Stabilize'):
+                            ctrl.stabilization()
+                        if (CType == 'Ignition'):
+                            ctrl.ignition(mode)
         
-        # condition = ctrl.dataerrorcheck()
-        # mode = 1
-        # if (IGNITION):
-        #     ctrl.Ignition(mode)
-        """
         while True:
             print(self.proxy[0])
             sleep(2)
@@ -129,7 +124,6 @@ if __name__ == "__main__":
         # Assign each function to a Process
         data = SensorProcess(lproxy)
         comm = ControlProcess(lproxy)
-
         # Start processes
         data.start()
         comm.start()
@@ -137,9 +131,9 @@ if __name__ == "__main__":
         data.join()
         comm.join()
 
-    finally:  # Catch interrupts (terminates correctly)
+    finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
         data.shutdown()
         comm.shutdown()
         sleep(2)  # Wait until processes close
-        print("Processes terminated.\n")
+        print("Processes terminated.\n"

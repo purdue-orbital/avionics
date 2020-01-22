@@ -16,6 +16,7 @@ from ak89 import AK8963
 from ds32 import DS3231
 from neo7 import NEO7M
 
+ROCKET_IN = 27
 
 class Sensors:
     """
@@ -88,13 +89,10 @@ class Sensors:
 
         self.console.info(f"\n\n### Starting {name} ###\n")
 
-        rocket_in = 27
-
         #on init, setup the rocket input pin and its event handler
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(rocket_in, GPIO.IN)
-        GPIO.setup(23, GPIO.OUT)
-        GPIO.add_event_detect(rocket_in, GPIO.FALLING, self.launch_detect)
+        GPIO.setup(ROCKET_IN, GPIO.IN)
+        GPIO.add_event_detect(ROCKET_IN, GPIO.FALLING, self.launch_detect)
         
         self.name = name
         self.json = {
@@ -140,10 +138,6 @@ class Sensors:
         except: self.console.warning("NEO 7M GPS not initialized")
 
         self.list = self.SLL()
-
-        # GPIO.output(23, GPIO.HIGH)
-        # time.sleep(2)
-        # GPIO.output(23, GPIO.LOW)
         
         if radio_port is not None:  # Create radio object if desired
             try:
@@ -164,12 +158,12 @@ class Sensors:
         Specify cleanup procedure. Protects against most crashes
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
-        # GPIO.cleanup()
+        GPIO.cleanup()
         self.log.close()
     
     def launch_detect(self, callback):
         """
-        Callback function for the rocket_in pin
+        Callback function for the ROCKET_IN pin
         """
         logging.info(f"Launch detected at mission time {self.time[0]}")
 
@@ -237,6 +231,11 @@ class Sensors:
         temp = {k: v for k, v in self.json.items() if k in args} # Prune keys
         # Reassign here
         manager[0] = temp
+
+        # Send time as well
+        temp = manager[1]
+        temp = self.time[0]
+        manager[1] = temp
 
     def send(self):
         """
