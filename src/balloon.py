@@ -1,52 +1,60 @@
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Event
 from datetime import datetime, timedelta
 from sensors import Sensors
 from control import Control
 from time import sleep
 
-def dataProc(lproxy):
-    """
-    Main process for sensors.py
-    Initializes sensor package module and passes data to the RadioModule
-    (and comm_parse.py using a Manager())
-    """
+class SensorProcess(Process):
+    def __init__(self, lproxy):
+        Process.__init__(self)
+        self.exit = Event()
+        self.proxy = lproxy
 
-    print("Running sensors.py ...\n")
+    def run(self):
+        """
+        Main process for sensors.py
+        Initializes sensor package module and passes data to the RadioModule
+        (and comm_parse.py using a Manager())
+        """
+        print("Running sensors.py ...\n")
 
-    with Sensors("balloon") as sensors:
-        # Lambda used to pass generic multi-arg functions to sensors.add
-        # These will later be executed in unique threads
-        sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
-            token="temp (C)", access=lambda: sensors.temperature()
-        )
+        with Sensors("balloon") as sensors:
+            # Lambda used to pass generic multi-arg functions to sensors.add
+            # These will later be executed in unique threads
+            sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
+                token="temp (C)", access=lambda: sensors.temperature()
+            )
 
-        sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
-            token="lat, long, alt (m)", access=lambda: sensors.gps()
-        )
+            sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
+                token="lat, long, alt (m)", access=lambda: sensors.gps()
+            )
 
-        sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
-            token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
-        )
+            sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
+                token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+            )
 
-        sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
-            token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
-        )
-        sensors.add(lambda: sensors.pass_to(lproxy, "alt", "gyro"), 1)
+            sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
+                token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+            )
+            sensors.add(lambda: sensors.pass_to(self.proxy, "alt", "gyro"), 1)
 
-        # sensors.add(lambda: sensors.send(), 1)
+            # sensors.add(lambda: sensors.send(), 1)
 
-        
-        ### DON'T CHANGE ###
-        sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
-        sensors.write_header()
-        sensors.add(lambda: sensors.write(), sensors.greatest)
-        sensors.stitch()
-        ### DON'T CHANGE ###
-        
-        while True:
-            sensors.print()
-            sleep(1)
-   
+            
+            ### DON'T CHANGE ###
+            sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
+            sensors.write_header()
+            sensors.add(lambda: sensors.write(), sensors.greatest)
+            sensors.stitch()
+            ### DON'T CHANGE ###
+            
+            while True:
+                sensors.print()
+                sleep(1)
+    
+    def shutdown(self):
+        print("Killing SensorProcess...")
+        self.exit.set()
 
 def commProc(lproxy):
     """
@@ -102,7 +110,7 @@ if __name__ == "__main__":
         lproxy.append({})
 
         # Assign each function to a Process
-        data = Process(target=dataProc, args=(lproxy,))
+        data = SensorProcess(lproxy)
         # comm = Process(target=commProc, args=(lproxy,))
 
         # Start processes
@@ -112,8 +120,9 @@ if __name__ == "__main__":
         while True:
             sleep(10)
 
-    except KeyboardInterrupt:  # Catch interrupts (terminates correctly)
+    finally:  # Catch interrupts (terminates correctly)
         print("Ending processes...")
-        data.terminate()
+        data.shutdown()
         # comm.terminate()
+        sleep(5)  # Wait until processes close
         print("Processes terminated.\n")
