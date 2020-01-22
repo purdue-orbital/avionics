@@ -10,13 +10,13 @@ from digi.xbee.devices import XBeeDevice, XBee64BitAddress, RemoteXBeeDevice, XB
 # - For windows, it will be 'COM#'
 #
 # where # is the port number.
-LOCAL_PORT = "/dev/ttyS7"
+LOCAL_PORT = "/dev/ttyUSB2"
 
 # Baud rate of the local device
 BAUD_RATE = 9600
 
 # Remote node MAC address in hexadecimal format
-REMOTE_NODE_ADDRESS = "0013A2004148887C"
+REMOTE_NODE_ADDRESS = "0013A2004187A0B0"
 
 OK = "\u001b[32m"
 WARN = "\u001b[33m"

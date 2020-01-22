@@ -32,6 +32,9 @@ def dataProc(lproxy):
             token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
         )
         sensors.add(lambda: sensors.pass_to(lproxy, "alt", "gyro"), 1)
+
+        # sensors.add(lambda: sensors.send(), 1)
+
         
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
@@ -53,7 +56,7 @@ def commProc(lproxy):
 
     print("Running control.py ...\n")
 
-    ctrl = Control(5, 6, 22, 13, 0.05) #rocketlogpin currently undefined
+    ctrl = Control(5, 6, 22, 13) #rocketlogpin currently undefined
     # pin 13 = stabilization pin
     # pin 22 = rocket out pin
 
@@ -64,19 +67,19 @@ def commProc(lproxy):
     while ((result == None) & (datetime.now() < endT)):
         result = ctrl.connection_check()
     if result == 0:
-        ctrl.QDMCheck(0)
+        ctrl.qdm_check(0)
     else:
-        ctrl.receivedata()
+        ctrl.receive_data()
         while not ctrl.commands.empty():
             GSDATA = ctrl.commands.get()
     
             CType = GSDATA['command']
             if (CType == 'QDM'):
-                ctrl.QDMCheck(0)
+                ctrl.qdm_check(0)
             if (CType == 'Stabilize'):
-                ctrl.Stabilization(lproxy)
+                ctrl.stabilization(lproxy)
             if (CType == 'Ignition'):
-                ctrl.Ignition(mode, lproxy)
+                ctrl.ignition(mode)
 
         ## NEED CHANGES ###
         #rocket = d

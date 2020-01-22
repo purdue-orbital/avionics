@@ -96,7 +96,7 @@ class Control:
             if (mode == 1):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
-                data = self.generate_status_json(self)
+                data = Control.generate_status_json()
                 data["Ignition"] = 1
                 self.c.send(data, "status")
                 time.sleep(0.1)
@@ -107,7 +107,7 @@ class Control:
             elif (mode == 2):
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
-                data = self.generate_status_json(self)
+                data = Control.generate_status_json()
                 data["Ignition"] = 1
                 self.c.send(data, "status")
                 time.sleep(10)
@@ -156,7 +156,7 @@ class Control:
         return (altitude & spinrate)
 
     def connection_check(self):
-        return self.radio.remote_device
+        return self.c.remote_device
 
     def stabilization(self,manager):
         self.read_data(manager)

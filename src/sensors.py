@@ -16,6 +16,7 @@ from ak89 import AK8963
 from ds32 import DS3231
 from neo7 import NEO7M
 
+
 class Sensors:
     """
     Object-oriented approach to creating sensor functionality for
@@ -163,7 +164,7 @@ class Sensors:
         Specify cleanup procedure. Protects against most crashes
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
-        GPIO.cleanup()
+        # GPIO.cleanup()
         self.log.close()
     
     def launch_detect(self, callback):
@@ -198,10 +199,10 @@ class Sensors:
                 data = head.access()
                 if head.id is not None:  # If data is being sent over radio, will have an ID
                     sub = self.json[head.id]
-                    if type(data) is dict:
-                        sub = {list(sub.keys())[i]: data[i] for i in range(len(data))}
+                    if type(sub) is dict:
+                        self.json[head.id] = {list(sub.keys())[i]: data[i] for i in range(len(data))}
                     else:  # case of temperature, only has one variable
-                        sub = data[0]
+                        self.json[head.id] = data[0]
                 string.append(",".join([str(x) for x in data]))
             head = head.next
 
@@ -359,11 +360,11 @@ class Sensors:
         """
         if write:
             try:
-                self._temperature = self.clock.temp
+                self._temperature = (self.clock.temp,)
             except Exception as e:
                 self.console.error(e)
                 self._temperature = (-999,)
-        else: return (self._temperature,)
+        else: return self._temperature
 
 
 if __name__ == "__main__":
@@ -385,6 +386,8 @@ if __name__ == "__main__":
         sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
             token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
         )
+
+        # sensors.add(lambda: sensors.send(), 1)
         
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
