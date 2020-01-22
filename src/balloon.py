@@ -36,7 +36,7 @@ class SensorProcess(Process):
             sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
                 token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
             )
-            sensors.add(lambda: sensors.pass_to(self.proxy, "alt", "gyro"), 1)
+            sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 1)
 
             # sensors.add(lambda: sensors.send(), 1)
 
@@ -55,50 +55,66 @@ class SensorProcess(Process):
     def shutdown(self):
         print("Killing SensorProcess...")
         self.exit.set()
+        print("SensorProcess killed.")
 
-def commProc(lproxy):
-    """
-    Controls all command processes for the balloon flight computer. Gets data
-    from dataProc using a DictProxy managed by Manager() in main.
-    """
+class ControlProcess(Process):
+    def __init__(self, lproxy):
+        Process.__init__(self)
+        self.exit = Event()
+        self.proxy = lproxy
 
-    print("Running control.py ...\n")
+    def run(self):
+        """
+        Controls all command processes for the balloon flight computer. Gets data
+        from dataProc using a DictProxy managed by Manager() in main.
+        """
+        """
+        print("Running control.py ...\n")
 
-    ctrl = Control(5, 6, 22, 13) #rocketlogpin currently undefined
-    # pin 13 = stabilization pin
-    # pin 22 = rocket out pin
+        ctrl = Control(5, 6, 22, 13) #rocketlogpin currently undefined
+        # pin 13 = stabilization pin
+        # pin 22 = rocket out pin
 
-    mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
+        mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
 
-    result = ctrl.connection_check()
-    endT = datetime.now() + timedelta(seconds = 10)
-    while ((result == None) & (datetime.now() < endT)):
         result = ctrl.connection_check()
-    if result == 0:
-        ctrl.qdm_check(0)
-    else:
-        ctrl.receive_data()
-        while not ctrl.commands.empty():
-            GSDATA = ctrl.commands.get()
+        endT = datetime.now() + timedelta(seconds = 10)
+        while ((result == None) & (datetime.now() < endT)):
+            result = ctrl.connection_check()
+        if result == 0:
+            ctrl.qdm_check(0)
+        else:
+            ctrl.receive_data()
+            while not ctrl.commands.empty():
+                GSDATA = ctrl.commands.get()
     
-            CType = GSDATA['command']
-            if (CType == 'QDM'):
-                ctrl.qdm_check(0)
-            if (CType == 'Stabilize'):
-                ctrl.stabilization(lproxy)
-            if (CType == 'Ignition'):
-                ctrl.ignition(mode)
+                CType = GSDATA['command']
+                if (CType == 'QDM'):
+                    ctrl.qdm_check(0)
+                if (CType == 'Stabilize'):
+                    ctrl.stabilization(lproxy)
+                if (CType == 'Ignition'):
+                    ctrl.ignition(mode)
 
         ## NEED CHANGES ###
-        #rocket = d
-   # balloon = Manager
+        # rocket = d
+        # balloon = Manager
             
-    #ctrl.readdata(d)
+        # ctrl.readdata(d)
         
-       # condition = ctrl.dataerrorcheck()
-       # mode = 1
-       # if (IGNITION):
-       #     ctrl.Ignition(mode)
+        # condition = ctrl.dataerrorcheck()
+        # mode = 1
+        # if (IGNITION):
+        #     ctrl.Ignition(mode)
+        """
+        while True:
+            print(self.proxy[0])
+            sleep(2)
+
+    def shutdown(self):
+        print("Killing ControlProcess...")
+        self.exit.set()
+        print("ControlProcess killed.")
 
 
 if __name__ == "__main__":
@@ -111,18 +127,18 @@ if __name__ == "__main__":
 
         # Assign each function to a Process
         data = SensorProcess(lproxy)
-        # comm = Process(target=commProc, args=(lproxy,))
+        comm = ControlProcess(lproxy)
 
         # Start processes
         data.start()
-        # comm.start()
+        comm.start()
         # Wait in main so that this can be escaped properly with ctrl+c
-        while True:
-            sleep(10)
+        data.join()
+        comm.join()
 
     finally:  # Catch interrupts (terminates correctly)
         print("Ending processes...")
         data.shutdown()
-        # comm.terminate()
-        sleep(5)  # Wait until processes close
+        comm.shutdown()
+        sleep(2)  # Wait until processes close
         print("Processes terminated.\n")
