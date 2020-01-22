@@ -52,7 +52,7 @@ class Control:
         self.console = logging.getLogger('control')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
         logging.basicConfig(
-            level=logging.INFO, filename='avionics/src/control.py', filemode='a', format=_format
+            level=logging.INFO, filename='avionics/src/status_control.py', filemode='a', format=_format
         )
 
     def qdm_check(self, QDM):
@@ -101,10 +101,12 @@ class Control:
                 self.c.send(data, "status")
                 time.sleep(0.1)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-                GPIO.output(self.rocketlogpin,False)
                 GPIO.output(self.ignitionpin,False)
                 logging.info("Rocket ignition (testing)")
+
             elif (mode == 2):
+                GPIO.output(self.rocketlogpin,False)
+                time.sleep(5)  # tell rocket to start logging and give appropriate time
                 # class gpiozero.OutputDevice (Outputsignal, active_high(True) ,initial_value(False), pin_factory(None))
                 GPIO.output(self.ignitionpin,True)
                 data = Control.generate_status_json()
@@ -112,7 +114,6 @@ class Control:
                 self.c.send(data, "status")
                 time.sleep(10)
                 # class gpiozero.OutputDevice (Outputsignal, active_high(False) ,initial_value(True), pin_factory(None))
-                GPIO.output(self.rocketlogpin,False)
                 GPIO.output(self.ignitionpin,False)
                 logging.info("Rocket ignition")
 
@@ -128,7 +129,7 @@ class Control:
 
         return none
         '''
-        alt = balloon['alt']
+        alt = balloon['GPS']['alt']
 
         gx = balloon['gyro']['x']
         gy = balloon['gyro']['y']
@@ -142,15 +143,27 @@ class Control:
         self.balloon = [alt, gx, gy, gz]
         logging.debug("Data received")
 
+    def lowpass_gyro(self, tolerance):
+        """
+        Implements a low-pass filter to accurately determine spinrate,
+        and returns True if within spec.
+
+        Arguments:
+            tolerance : spec (in dps) to allow for
+        """
+        gx, gy, gz = self.gyro_queue.get()
+
+        return (math.sqrt(gx**2 + gy**2 + gz**2) < tolerance)
+
     def launch_condition(self):
         '''
-        This check Launch condition
+        Returns True if both spinrate and altitude are within spec.
 
         return result: launch condition true or false
         '''
 
         altitude = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
-        spinrate = (math.sqrt(self.balloon[3]**2 + self.balloon[4]**2 + self.balloon[5]**2) <= 5)
+        spinrate = self.lowpass_gyro(5)
         logging.info(f"Altitude: {altitude} - Spinrate: {spinrate}")
 
         return (altitude & spinrate)
@@ -158,11 +171,10 @@ class Control:
     def connection_check(self):
         return self.c.remote_device
 
-    def stabilization(self,manager):
-        self.read_data(manager)
+    def stabilization(self):
         condition = (self.balloon[0]<=25500) & (self.balloon[0] >= 24500)
         if (condition):
-            GPIO.output(self.stabilizationpin,True)
+            GPIO.output(self.stabilizationpin, GPIO.HIGH)
             data = self.generate_status_json()
             data["Stabilization"] = 1
             self.c.send(data,"status")

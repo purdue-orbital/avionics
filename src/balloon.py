@@ -78,7 +78,7 @@ class ControlProcess(Process):
         mode = 1 # mode 1 = testmode / mode 2 = pre-launch mode
 
         result = ctrl.connection_check()
-        endT = datetime.now() + timedelta(seconds = 10)
+        endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
         while ((result == None) & (datetime.now() < endT)):
             result = ctrl.connection_check()
         if result == 0:
@@ -91,8 +91,9 @@ class ControlProcess(Process):
                 CType = GSDATA['command']
                 if (CType == 'QDM'):
                     ctrl.qdm_check(0)
+                # Are ignition and stabilize same signal?
                 if (CType == 'Stabilize'):
-                    ctrl.stabilization(lproxy)
+                    ctrl.stabilization()
                 if (CType == 'Ignition'):
                     ctrl.ignition(mode)
 
