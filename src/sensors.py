@@ -158,6 +158,7 @@ class Sensors:
         Specify cleanup procedure. Protects against most crashes
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
+        else: self.console.info("Sensors.py completed successfully.")
         GPIO.cleanup()
         self.log.close()
     
@@ -166,7 +167,8 @@ class Sensors:
         Callback function for the ROCKET_IN pin
         """
         logging.info(f"Launch detected at mission time {self.time()[0]}")
-
+        GPIO.remove_event_detect(ROCKET_IN)
+        
     def write_header(self):
         """
         Writes header for specified sensors to log file

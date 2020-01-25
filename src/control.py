@@ -52,7 +52,7 @@ class Control:
         self.console = logging.getLogger('control')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
         logging.basicConfig(
-            level=logging.INFO, filename='../logs/status_control.py', filemode='a+', format=_format
+            level=logging.INFO, filename='../logs/status_control.log', filemode='a+', format=_format
         )
 
         self.console.info(f"\n\n### Starting {name} ###\n")
@@ -88,6 +88,7 @@ class Control:
         Specify cleanup procedure. Protects against most crashes
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
+        else: self.console.info("Control.py completed successfully.")
         GPIO.cleanup()
 
     def read_data(self, proxy):
@@ -175,7 +176,6 @@ class Control:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
         
         # self.c.send(data, "status")
-        print(data)
         
     def ignition(self, mode):
         '''

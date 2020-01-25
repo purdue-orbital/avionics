@@ -80,8 +80,13 @@ do
 	    echo "Arguments:"
 	    echo -e "\t-b, --balloon\tLaunch balloon environment"
 	    echo -e "\t-r, --rocket\tLaunch rocket environment"
+	    echo -e "\t-c, --clean\tRemove old log files"
 	    echo -e "\t-h, --help\tOpen this message"
 	    echo
+	    ;;
+	-c|--clean)
+	    echo "Cleaning up ${FILE}${local_path}logs/*.log${NC}..."
+	    sudo rm ${local_path}logs/*.log
 	    ;;
 	*)
 	    echo "${FAIL}[ERROR]${NC} Command line option $i is not a supported argument."

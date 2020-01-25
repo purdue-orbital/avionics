@@ -29,14 +29,14 @@ class SensorProcess(Process):
                 token="lat, long, alt (m)", access=lambda: sensors.gps()
             )
 
-            sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
+            sensors.add(lambda: sensors.accel(write=True), 2, identity="acc",
                 token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
             )
 
             sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
                 token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
             )
-            sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 1)
+            sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
 
             # sensors.add(lambda: sensors.send(), 1)
 
@@ -49,7 +49,6 @@ class SensorProcess(Process):
             ### DON'T CHANGE ###
             
             while True:
-                sensors.print()
                 sleep(1)
     
     def shutdown(self):
@@ -104,7 +103,7 @@ class ControlProcess(Process):
                             ctrl.ignition(mode)
             """
             sleep(5)
-            # ctrl.stabilization()
+            ctrl.stabilization()
             while True:
                 sleep(2)
 
@@ -136,5 +135,5 @@ if __name__ == "__main__":
         print("Ending processes...")
         data.shutdown()
         comm.shutdown()
-        sleep(2)  # Wait until processes close
+        sleep(1)  # Wait until processes close
         print("Processes terminated.\n")
