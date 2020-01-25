@@ -1,7 +1,9 @@
 import sys, os
 import time
 import json, math
+import queue
 from collections import deque
+from threading import Thread, Event
 import logging
 from math import atan, pi
 import RPi.GPIO as GPIO
@@ -50,11 +52,11 @@ class Control:
         self.console = logging.getLogger('control')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
         logging.basicConfig(
-            level=logging.INFO, filename='avionics/src/status_control.py', filemode='a+', format=_format
+            level=logging.INFO, filename='../logs/status_control.py', filemode='a+', format=_format
         )
 
         self.console.info(f"\n\n### Starting {name} ###\n")
-
+        
         # Create a data queue
         self.gx_queue = deque([])
         self.gy_queue = deque([])
@@ -69,11 +71,11 @@ class Control:
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
         GPIO.setup(STABILIZATION_PIN, GPIO.OUT)
-
+        
         self.altitude = None
         # self.rocket = None
 
-        self.c = Comm.get_instance()
+        # self.c = Comm.get_instance()
         self.commands = queue.Queue(maxsize=10)
 
         self.console.info("Initialization complete")
@@ -87,7 +89,6 @@ class Control:
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
         GPIO.cleanup()
-        self.log.close()
 
     def read_data(self, proxy):
         '''
@@ -97,24 +98,28 @@ class Control:
             proxy : list containing dict and time
         '''
         balloon = proxy[0]
-        self.altitude = balloon['GPS']['alt']
-        gx = balloon['gyro']['x']
-        gy = balloon['gyro']['y']
-        gz = balloon['gyro']['z']
-        time = proxy[1]
 
-        if (len(list(self.gx_queue)) > 100): 
-            self.gx_queue.popleft()
-            self.gy_queue.popleft()
-            self.gz_queue.popleft()
-            self.time_queue.popleft()
+        if balloon:
+            self.altitude = balloon['GPS']['alt']
+            gx = balloon['gyro']['x']
+            gy = balloon['gyro']['y']
+            gz = balloon['gyro']['z']
+            time = balloon['time']
+
+            if (len(list(self.gx_queue)) > 100): 
+                self.gx_queue.popleft()
+                self.gy_queue.popleft()
+                self.gz_queue.popleft()
+                self.time_queue.popleft()
             
-        self.gx_queue.append(gx)
-        self.gy_queue.append(gy)
-        self.gz_queue.append(gz)
-        self.time_queue.append(time)
+            self.gx_queue.append(gx)
+            self.gy_queue.append(gy)
+            self.gz_queue.append(gz)
+            self.time_queue.append(time)
 
-        logging.debug("Data received")
+            # print(f"{time} : {gx},{gy},{gz}")
+
+            logging.debug("Data received")
 
     def lowpass_gyro(self):
         """
@@ -158,7 +163,8 @@ class Control:
         """
         logging.info("Stabilization attempted")
         # Bounds hard-coded for "ease" of manipulation (not worth the effort)
-        condition = (self.altitude<=25500) & (self.altitude >= 24500)
+        # condition = (self.altitude<=25500) & (self.altitude >= 24500)
+        condition = True
         data = Control.generate_status_json()
 
         if (condition):
@@ -168,8 +174,9 @@ class Control:
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
         
-        self.c.send(data, "status")
-
+        # self.c.send(data, "status")
+        print(data)
+        
     def ignition(self, mode):
         '''
         This checks condition and starts ignition

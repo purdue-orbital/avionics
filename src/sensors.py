@@ -165,7 +165,7 @@ class Sensors:
         """
         Callback function for the ROCKET_IN pin
         """
-        logging.info(f"Launch detected at mission time {self.time[0]}")
+        logging.info(f"Launch detected at mission time {self.time()[0]}")
 
     def write_header(self):
         """
@@ -229,13 +229,9 @@ class Sensors:
         # of changes to itself
         temp = manager[0]
         temp = {k: v for k, v in self.json.items() if k in args} # Prune keys
+        temp["time"] = self.time()[0]
         # Reassign here
         manager[0] = temp
-
-        # Send time as well
-        temp = manager[1]
-        temp = self.time[0]
-        manager[1] = temp
 
     def send(self):
         """
@@ -368,6 +364,9 @@ class Sensors:
 
 if __name__ == "__main__":
     with Sensors("balloon") as sensors:
+
+        temp = [{},]
+        
         # Lambda used to pass generic multi-arg functions to sensors.add
         # These will later be executed in unique threads
         sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
@@ -386,6 +385,8 @@ if __name__ == "__main__":
             token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
         )
 
+        sensors.add(lambda:sensors.pass_to(temp), 1)
+
         # sensors.add(lambda: sensors.send(), 1)
         
         ### DON'T CHANGE ###
@@ -397,4 +398,5 @@ if __name__ == "__main__":
         
         while True:
             sensors.print()
+            print(temp)
             time.sleep(1)

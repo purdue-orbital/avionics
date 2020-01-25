@@ -75,7 +75,7 @@ class ControlProcess(Process):
             # Data collection needs to be running parallel to rest of program
             collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
-
+            """
             while True:
                 # Control loop to determine radio disconnection
                 result = ctrl.connection_check()
@@ -102,10 +102,11 @@ class ControlProcess(Process):
                             ctrl.stabilization()
                         if (CType == 'Ignition'):
                             ctrl.ignition(mode)
-        
-        while True:
-            print(self.proxy[0])
-            sleep(2)
+            """
+            sleep(5)
+            # ctrl.stabilization()
+            while True:
+                sleep(2)
 
     def shutdown(self):
         print("Killing ControlProcess...")
@@ -136,4 +137,4 @@ if __name__ == "__main__":
         data.shutdown()
         comm.shutdown()
         sleep(2)  # Wait until processes close
-        print("Processes terminated.\n"
+        print("Processes terminated.\n")
