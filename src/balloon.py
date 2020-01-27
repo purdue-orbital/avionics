@@ -3,6 +3,9 @@ from datetime import datetime, timedelta
 from sensors import Sensors
 from control import Control
 from time import sleep
+import RPi.GPIO as GPIO
+
+STABILIZATION_PIN = 13
 
 class SensorProcess(Process):
     def __init__(self, lproxy):
@@ -16,7 +19,7 @@ class SensorProcess(Process):
         Initializes sensor package module and passes data to the RadioModule
         (and comm_parse.py using a Manager())
         """
-        print("Running sensors.py ...\n")
+        print("Running sensors.py ...")
 
         with Sensors("balloon") as sensors:
             # Lambda used to pass generic multi-arg functions to sensors.add
@@ -29,11 +32,11 @@ class SensorProcess(Process):
                 token="lat, long, alt (m)", access=lambda: sensors.gps()
             )
 
-            sensors.add(lambda: sensors.accel(write=True), 2, identity="acc",
+            sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
                 token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
             )
 
-            sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
+            sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
                 token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
             )
             sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
@@ -104,8 +107,9 @@ class ControlProcess(Process):
             """
             sleep(5)
             ctrl.stabilization()
+            
             while True:
-                sleep(2)
+                sleep(5)
 
     def shutdown(self):
         print("Killing ControlProcess...")
@@ -130,7 +134,10 @@ if __name__ == "__main__":
         # Wait in main so that this can be escaped properly with ctrl+c
         data.join()
         comm.join()
-
+        
+        while True:
+            sleep(2)
+            
     finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
         data.shutdown()

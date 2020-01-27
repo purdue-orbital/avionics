@@ -86,6 +86,7 @@ do
 	    ;;
 	-c|--clean)
 	    echo "Cleaning up ${FILE}${local_path}logs/*.log${NC}..."
+	    echo
 	    sudo rm ${local_path}logs/*.log
 	    ;;
 	*)
@@ -97,7 +98,8 @@ do
     esac
 done
 
-echo "Attempting to run ${FILE}${program_path}${program}${NC}"
+echo "Attempting to run ${FILE}${program_path}${program}${NC}..."
+echo
 
 sudo python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
 if [[ $? == '1' ]]

@@ -67,6 +67,7 @@ class Control:
         GPIO.setmode(GPIO.BCM)
 
         GPIO.setup(QDM_PIN, GPIO.OUT)
+        GPIO.output(QDM_PIN, GPIO.HIGH)  # Turn on QDM dead switch
         GPIO.setup(IGNITION_PIN, GPIO.OUT)
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
@@ -233,7 +234,8 @@ class Control:
 
             data = Control.generate_status_json()
             data["QDM"] = 1
-            self.c.send(data, "status")
+            print(data)
+            #self.c.send(data, "status")
             logging.info("QDM initiated")
 
     def connection_check(self):
