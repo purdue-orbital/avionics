@@ -225,18 +225,11 @@ class Sensors:
         # processes requires the dictionary to be reassigned to notify the DictProxy
         # of changes to itself
         temp = manager[0]
-        temp = {k: v for k, v in self.json.items() if k in args} # Prune keys
-        temp["time"] = self.time()[0]
+        # temp = {k: v for k, v in self.json.items() if k in args} # Prune keys
+        # temp["time"] = self.time()[0]
+        temp = self.json
         # Reassign here
         manager[0] = temp
-
-    def send(self):
-        """
-        Sends most recent data collected over radio
-        """
-        print("JSON: ", self.json)
-        hello = {"hello": 1}
-        self.c.send(self.json, "balloon")
 
     def add(self, perform, freq, identity=None, token=None, access=None):
         """

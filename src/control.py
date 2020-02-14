@@ -80,6 +80,9 @@ class Control:
         self.c = Comm.get_instance(self)
         self.commands = queue.Queue(maxsize=10)
         self.c.bind(self.commands)
+
+        self.json = None
+        
         self.console.info("Initialization complete")
 
     def __enter__(self):
@@ -100,29 +103,40 @@ class Control:
         Arguments:
             proxy : list containing dict and time
         '''
-        balloon = proxy[0]
+        self.json = proxy[0]
 
-        if balloon:
-            self.altitude = balloon['GPS']['alt']
-            gx = balloon['gyro']['x']
-            gy = balloon['gyro']['y']
-            gz = balloon['gyro']['z']
-            time = balloon['time']
+        if self.json:
+            self.send()  # send data over radio
+
+            self.altitude = self.json['GPS']['alt']
+            gx = self.json['gyro']['x']
+            gy = self.json['gyro']['y']
+            gz = self.json['gyro']['z']
+            # time = balloon['time']
 
             if (len(list(self.gx_queue)) > 100): 
                 self.gx_queue.popleft()
                 self.gy_queue.popleft()
                 self.gz_queue.popleft()
-                self.time_queue.popleft()
+                # self.time_queue.popleft()
             
             self.gx_queue.append(gx)
             self.gy_queue.append(gy)
             self.gz_queue.append(gz)
-            self.time_queue.append(time)
+            # self.time_queue.append(time)
 
             # print(f"{time} : {gx},{gy},{gz}")
 
             logging.debug("Data received")
+
+    def send(self):
+        """
+        Sends most recent data collected over radio
+        """
+        # print("JSON: ", self.json)
+        # hello = {"hello": 1}
+        if self.json:
+            self.c.send(self.json, "balloon")
 
     def lowpass_gyro(self):
         """
