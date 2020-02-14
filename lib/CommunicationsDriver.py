@@ -15,15 +15,21 @@ class Comm:
             Comm.__instance = CommSingleton()
 
     def get_instance(self):
+        print("get called")
         if Comm.__instance is None:
+            print("first")
             Comm()
+        else: print("not first")
         return Comm.__instance
 
 
 class CommSingleton:
     def __init__(self):
-        self.__radio = Module.get_instance(self)
-
+        try:
+            self.__radio = Module.get_instance(self)
+        except Exception as e:
+            print(e)
+            
     def send(self, command, command_type):
 
         try:
@@ -32,3 +38,6 @@ class CommSingleton:
                 self.__radio.send(json.dumps(command))
         except Exception as e:
             print(e)
+
+    def bind(self, queue):
+        self.__radio.bind_queue(queue)

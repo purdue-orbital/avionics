@@ -89,6 +89,10 @@ do
 	    echo
 	    sudo rm ${local_path}logs/*.log
 	    ;;
+	-t|--testing)
+	    echo "${INFO}[INFO]${NC} Launching ${FILE}control.py${NC} in testing mode"
+	    echo
+	    ;;
 	*)
 	    echo "${FAIL}[ERROR]${NC} Command line option $i is not a supported argument."
 	    echo "Try --help to see a list of available arguments."

@@ -96,18 +96,12 @@ class Sensors:
         
         self.name = name
         self.json = {
-                      "origin": name,
                       "GPS": {
                         "long": 0,
                         "lat": 0,
                         "alt": 0
                       },
                       "gyro": {
-                        "x": 0,
-                        "y": 0,
-                        "z": 0
-                      },
-                      "mag": {
                         "x": 0,
                         "y": 0,
                         "z": 0
@@ -142,6 +136,7 @@ class Sensors:
         if radio_port is not None:  # Create radio object if desired
             try:
                 self.c = Comm.get_instance(self)  # Initialize radio communication
+                time.sleep(5)
             except Exception as e:
                 self.console.error(e)
         else:
@@ -239,6 +234,8 @@ class Sensors:
         """
         Sends most recent data collected over radio
         """
+        print("JSON: ", self.json)
+        hello = {"hello": 1}
         self.c.send(self.json, "balloon")
 
     def add(self, perform, freq, identity=None, token=None, access=None):
@@ -365,10 +362,8 @@ class Sensors:
 
 
 if __name__ == "__main__":
-    with Sensors("balloon") as sensors:
+    with Sensors("balloon", radio_port="true") as sensors:
 
-        temp = [{},]
-        
         # Lambda used to pass generic multi-arg functions to sensors.add
         # These will later be executed in unique threads
         sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
@@ -389,7 +384,7 @@ if __name__ == "__main__":
 
         sensors.add(lambda:sensors.pass_to(temp), 1)
 
-        # sensors.add(lambda: sensors.send(), 1)
+        sensors.add(lambda: sensors.send(), 1)
         
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
@@ -399,6 +394,4 @@ if __name__ == "__main__":
         ### DON'T CHANGE ###
         
         while True:
-            sensors.print()
-            print(temp)
             time.sleep(1)

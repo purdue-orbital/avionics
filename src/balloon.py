@@ -77,7 +77,7 @@ class ControlProcess(Process):
             # Data collection needs to be running parallel to rest of program
             collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
-            """
+
             while True:
                 # Control loop to determine radio disconnection
                 result = ctrl.connection_check()
@@ -92,24 +92,22 @@ class ControlProcess(Process):
                     ctrl.qdm_check(0)
                 else:
                     # Receive commands and iterate through them
-                    ctrl.receive_data()
                     while not ctrl.commands.empty():
                         GSDATA = ctrl.commands.get()
 
                         CType = GSDATA['command']
-                        if (CType == 'QDM'):
+                        if (CType == 'qdm'):
                             ctrl.qdm_check(0)
                         # Are ignition and stabilize same signal?
-                        if (CType == 'Stabilize'):
+                        if (CType == 'Stabilization on'):
                             ctrl.stabilization()
                         if (CType == 'Ignition'):
                             ctrl.ignition(mode)
-            """
-            sleep(5)
-            ctrl.stabilization()
-            
-            while True:
-                sleep(5)
+
+                sleep(1)
+#            ctrl.qdm_check(0)
+#            sleep(3)
+#            ctrl.ignition(2)
 
     def shutdown(self):
         print("Killing ControlProcess...")

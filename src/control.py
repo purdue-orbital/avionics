@@ -14,10 +14,10 @@ sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 from RadioModule import Module
 from CommunicationsDriver import Comm
 
-QDM_PIN = 5
+QDM_PIN = 13
 IGNITION_PIN = 6
 ROCKET_LOG_PIN = 22
-STABILIZATION_PIN = 13
+STABILIZATION_PIN = 21
 
 class Control:
 
@@ -67,7 +67,7 @@ class Control:
         GPIO.setmode(GPIO.BCM)
 
         GPIO.setup(QDM_PIN, GPIO.OUT)
-        GPIO.output(QDM_PIN, GPIO.HIGH)  # Turn on QDM dead switch
+        GPIO.output(QDM_PIN, GPIO.LOW)  # Turn on QDM dead switch
         GPIO.setup(IGNITION_PIN, GPIO.OUT)
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
@@ -76,9 +76,10 @@ class Control:
         self.altitude = None
         # self.rocket = None
 
-        # self.c = Comm.get_instance()
+        time.sleep(2)
+        self.c = Comm.get_instance(self)
         self.commands = queue.Queue(maxsize=10)
-
+        self.c.bind(self.commands)
         self.console.info("Initialization complete")
 
     def __enter__(self):
@@ -171,12 +172,13 @@ class Control:
 
         if (condition):
             GPIO.output(STABILIZATION_PIN, GPIO.HIGH)
+            print("stabilization")
             data["Stabilization"] = 1
             logging.info("Stabilization initiated")
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
         
-        # self.c.send(data, "status")
+        self.c.send(data, "status")
         
     def ignition(self, mode):
         '''
@@ -193,7 +195,8 @@ class Control:
         logging.info("Ignition attempted")
         data = Control.generate_status_json()
 
-        launch = self.launch_condition()
+        # launch = self.launch_condition()
+        launch = True
         if launch:
             data["Ignition"] = 1
 
@@ -206,7 +209,7 @@ class Control:
             elif (mode == 2):  # Ignite motor
                 GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
                 time.sleep(5)  # tell rocket to start logging and give appropriate time
-
+                print("ign out")
                 GPIO.output(IGNITION_PIN, GPIO.HIGH)
                 time.sleep(10)  # Needs to be experimentally verified
                 GPIO.output(IGNITION_PIN, GPIO.LOW)
@@ -228,22 +231,20 @@ class Control:
         '''
 
         if QDM:
-            GPIO.output(QDM_PIN,True)
+            GPIO.output(QDM_PIN, GPIO.LOW)
         else:
-            GPIO.output(QDM_PIN,False)
+            GPIO.output(QDM_PIN, GPIO.HIGH)
 
             data = Control.generate_status_json()
             data["QDM"] = 1
-            print(data)
-            #self.c.send(data, "status")
+            print("qdm")
+            self.c.send(data, "status")
             logging.info("QDM initiated")
 
     def connection_check(self):
-        return self.c.remote_device
-
-    def receive_data(self):
-        self.commands.put(json.loads(self.c.receive()))
-
+#        return self.c.remote_device
+        return True
+    
 
 if __name__ == "__main__":
     """
