@@ -96,6 +96,7 @@ class Sensors:
         
         self.name = name
         self.json = {
+                      "origin": "balloon",
                       "GPS": {
                         "long": 0,
                         "lat": 0,
