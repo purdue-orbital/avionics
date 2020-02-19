@@ -2,3 +2,4 @@ logs/*.log
 !logs/data.log
 *.pyc
 __pycache__
+.vscode
