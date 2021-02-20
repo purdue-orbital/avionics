@@ -29,13 +29,19 @@ if __name__ == "__main__":
             token="temp (C)", access=lambda: sensors.temperature()
         )
 
-        sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
+        sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
             token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
         )
 
-        sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
+        sensors.add(lambda: sensors.gyro(write=True), 1, identity="gyro",
             token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
         )
+
+        sensors.add(lambda: sensors.gps(write=True), 1, identity='gps',
+            token="lat,long,alt (m)", access=lambda: sensors.gps()
+        )
+
+        sensors.add(lambda: sensors.print(), 1)
 
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")

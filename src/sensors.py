@@ -10,7 +10,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
-from CommunicationsDriver import Comm
+# from CommunicationsDriver import Comm
 from mpu9 import MPU9250
 from ak89 import AK8963
 from ds32 import DS3231
@@ -376,9 +376,9 @@ if __name__ == "__main__":
             token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
         )
 
-        sensors.add(lambda:sensors.pass_to(temp), 1)
-
-        sensors.add(lambda: sensors.send(), 1)
+        # sensors.add(lambda:sensors.pass_to(temp), 1)
+        sensors.add(lambda: sensors.print(), 1)
+        # sensors.add(lambda: sensors.send(), 1)
         
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")

@@ -1,4 +1,5 @@
-import gpsd
+#!/usr/bin/env python3
+import gpsd 
 from time import sleep
 
 class NEO7M():
@@ -8,8 +9,8 @@ class NEO7M():
     @property
     def position(self):
         last = self.poll()
-
-        return (*last.position, last.altitude())    
+        lat, long = last.position()
+        return (lat, long, last.altitude())    
         
     def poll(self):
         return gpsd.get_current()

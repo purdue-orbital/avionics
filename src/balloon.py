@@ -1,7 +1,7 @@
 from multiprocessing import Process, Manager, Event
 from datetime import datetime, timedelta
 from sensors import Sensors
-from control import Control
+# from control import Control
 from time import sleep
 import RPi.GPIO as GPIO
 
