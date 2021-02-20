@@ -5,8 +5,6 @@ from sensors import Sensors
 from time import sleep
 import RPi.GPIO as GPIO
 
-STABILIZATION_PIN = 13
-
 class SensorProcess(Process):
     def __init__(self, lproxy):
         Process.__init__(self)
