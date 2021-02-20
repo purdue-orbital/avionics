@@ -23,6 +23,8 @@ To connect through SSH, PuTTY can be used (Windows) or the terminal (MacOS). Win
         
 The Pi's local IP address for `PAL3.0` is preceded by `inet`, and on the same line as `broadcast`. In this example, it is `10.186.110.99`.
 
+Alternatively, if you have Bonjour installed, the rocket computer's IP should be `rocketcontroller.local` and the balloon should be `ballooncontroller.local`.
+
 Next, ask an avionics member to add your user to each computer. Choose a password and a short username (these will be your login credentials each time). Enter
 `sudo adduser <username>`
 Type your first and last name as prompted -- all other prompts can be skipped. Next, enter
