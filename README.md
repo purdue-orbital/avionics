@@ -102,4 +102,38 @@ Below you will find a simple explanation of this system and its subsequent proce
 
 `src/balloon.py` Runs separate threads for `src/sensors.py` and `src/control.py`, as well as passes data between
 
+###Sensor Setup###
+	GPS:
+	Ensure pins are properly plugged in, and red light is on on GPS
+	Paste into command line:
+		sudo systemctl disable gpsd.socket
+		sudo gpsd /dev/ttyAMA0 -F /var/run/gpsd.sock
+	
+	if an error occurs, make sure gpsd is installed using:
+    		sudo apt-get update
+    		sudo apt-get install gpsd gpsd-clients python-gps
+
+	Test GPS is properly working by running either:
+		cgps
+		gpsmon
+		python3  ~/avionics/lib/neo7.py
+
+###Troubleshooting###
+
+	###'ModuleNotFoundError: No module named <modulename>'###
+	Try: 'pip3 install <module>' ex. 'pip3 install gpsd-py3'
+
+	if error still occurs, try sudo pip3; some scripts require sudo permission, which uses the root user's pythonpath
+	To check python path used by a file, paste at the top of the import statements:
+	
+	import sys
+	print(sys.path)
+	
+
+	
+	Additionally, ensure the correct python interpreter is used by pasting at the top of the script
+
+	#!/usr/bin/env python3 
+
+	
 </span>
