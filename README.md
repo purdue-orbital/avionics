@@ -102,7 +102,7 @@ Below you will find a simple explanation of this system and its subsequent proce
 
 `src/balloon.py` Runs separate threads for `src/sensors.py` and `src/control.py`, as well as passes data between
 
-###Sensor Setup###
+### Sensor Setup ###
 	GPS:
 	Ensure pins are properly plugged in, and red light is on on GPS
 	Paste into command line:
@@ -118,7 +118,7 @@ Below you will find a simple explanation of this system and its subsequent proce
 		gpsmon
 		python3  ~/avionics/lib/neo7.py
 
-###Troubleshooting###
+### Troubleshooting ###
 
 	###'ModuleNotFoundError: No module named <modulename>'###
 	Try: 'pip3 install <module>' ex. 'pip3 install gpsd-py3'
