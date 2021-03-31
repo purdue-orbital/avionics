@@ -2,7 +2,7 @@
 import json
 
 from Mode import Mode
-from RadioModule import Module
+from Radio import Radio 
 
 
 class Comm:
@@ -26,11 +26,11 @@ class Comm:
 class CommSingleton:
     def __init__(self):
         try:
-            self.__radio = Module.get_instance(self)
+            self.__radio = Radio() 
         except Exception as e:
             print(e)
             
-    def send(self, command, command_type):
+    def send(self, command):
 
         try:
             if not len(command) == 0:
@@ -40,4 +40,13 @@ class CommSingleton:
             print(e)
 
     def bind(self, queue):
-        self.__radio.bind_queue(queue)
+        self.__radio.bindQueue(queue)
+
+    def getLaunchFlag(self):
+        self.__radio.getLaunchFlag()
+    
+    def getQDMFlag(self):
+        self.__radio.getQDMFlag()
+    
+    def getAbortFlag(self):
+        self.__radio.getAbortFlag()
