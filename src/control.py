@@ -16,8 +16,10 @@ from CommunicationsDriver import Comm
 
 QDM_PIN = 13
 IGNITION_PIN = 6
+IGNITION_DETECT_PIN = 25
 ROCKET_LOG_PIN = 22
 STABILIZATION_PIN = 21
+
 
 class Control:
 
@@ -72,7 +74,8 @@ class Control:
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
         GPIO.setup(STABILIZATION_PIN, GPIO.OUT)
-        
+        GPIO.setup(IGNITION_DETECT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
         self.altitude = None
         # self.rocket = None
 
@@ -136,7 +139,7 @@ class Control:
         # print("JSON: ", self.json)
         # hello = {"hello": 1}
         if self.json:
-            self.c.send(self.json, "balloon")
+            self.c.send(self.json)
 
     def lowpass_gyro(self):
         """
@@ -192,7 +195,7 @@ class Control:
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
         
-        self.c.send(data, "status")
+        self.c.send(data)
         
     def ignition(self, mode):
         '''
@@ -213,12 +216,16 @@ class Control:
         launch = True
         if launch:
             data["Ignition"] = 1
-
+            GPIO.add_event_detect(IGNITION_DETECTION_PIN, GPIO.RISING)
             if (mode == 1):  # testing mode (avoid igniting motor)
                 GPIO.output(IGNITION_PIN, GPIO.HIGH)
                 time.sleep(0.1)
                 GPIO.output(IGNITION_PIN, GPIO.LOW)
                 logging.info("Ignition initiated (testing)")
+                if GPIO.event_detected(IGNITION_DETECTION_PIN):
+                    logging.info("Ignition (testing) detected")
+                else:
+                    logging.warn("Ignition(testing) not detected")
 
             elif (mode == 2):  # Ignite motor
                 GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
@@ -228,10 +235,14 @@ class Control:
                 time.sleep(10)  # Needs to be experimentally verified
                 GPIO.output(IGNITION_PIN, GPIO.LOW)
                 logging.info("Ignition initiated")
+                if GPIO.event_detected(IGNITION_DETECTION_PIN):
+                    logging.info("Ignition detected")
+                else:
+                    logging.warn("IGNITION not detected")
         else:
             logging.error("Ignition failed: altitude and/or spinrate not within tolerance")
 
-        self.c.send(data, "status")
+        self.c.send(data)
 
     def qdm_check(self, QDM):
         '''
@@ -252,7 +263,7 @@ class Control:
             data = Control.generate_status_json()
             data["QDM"] = 1
             print("qdm")
-            self.c.send(data, "status")
+            self.c.send(data)
             logging.info("QDM initiated")
 
     def connection_check(self):
