@@ -16,7 +16,7 @@ from CommunicationsDriver import Comm
 
 QDM_PIN = 13
 IGNITION_PIN = 6
-IGNITION_DETECT_PIN = 25
+IGNITION_DETECTION_PIN = 25
 ROCKET_LOG_PIN = 22
 STABILIZATION_PIN = 21
 
@@ -74,7 +74,7 @@ class Control:
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
         GPIO.setup(STABILIZATION_PIN, GPIO.OUT)
-        GPIO.setup(IGNITION_DETECT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(IGNITION_DETECTION_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
         self.altitude = None
         # self.rocket = None
@@ -239,10 +239,16 @@ class Control:
                     logging.info("Ignition detected")
                 else:
                     logging.warn("IGNITION not detected")
+
         else:
             logging.error("Ignition failed: altitude and/or spinrate not within tolerance")
 
         self.c.send(data)
+    def abort():
+        logging.info("aborted")
+        data = Control.generate_status_json()
+        data["QDM"] = 3
+        GPIO.cleanup()
 
     def qdm_check(self, QDM):
         '''

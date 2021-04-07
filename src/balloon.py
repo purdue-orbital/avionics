@@ -90,17 +90,12 @@ class ControlProcess(Process):
                     ctrl.qdm_check(0)
                 else:
                     # Receive commands and iterate through them
-                    while not ctrl.commands.empty():
-                        COMMANDS = ctrl.commands.get()
-
-                        CType = GSDATA['command']
-                        if (COMMANDS["QDM"]):
-                            ctrl.qdm_check(0)
-                        # Are ignition and stabilize same signal?
-                       # if (CType == 'Stabilization on'):
-                      #      ctrl.stabilization()
-                        if (COMMANDS["Launch"):
-                            ctrl.ignition(mode)
+                    if ctrl.getLaunchFlag()
+                        ctrl.ignition(mode)
+                    if ctrl.getQDMFlag()
+                        ctrl.qdm_check(0)
+                    if ctrl.getAbortFlag()
+                        ctrl.abort()
                 sleep(1)
 #            ctrl.qdm_check(0)
 #            sleep(3)
