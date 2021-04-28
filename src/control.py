@@ -9,9 +9,10 @@ from math import atan, pi
 import RPi.GPIO as GPIO
 from array import *
 
+
+#from Radio import Radio
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
-from RadioModule import Module
 from CommunicationsDriver import Comm
 
 QDM_PIN = 13
@@ -273,9 +274,9 @@ class Control:
             logging.info("QDM initiated")
 
     def connection_check(self):
-#        return self.c.remote_device
-        return True
+		return !self.commands.empty()
     
+    def    
 
 if __name__ == "__main__":
     """

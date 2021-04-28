@@ -1,7 +1,7 @@
 from multiprocessing import Process, Manager, Event
 from datetime import datetime, timedelta
 from sensors import Sensors
-# from control import Control
+from control import Control
 from time import sleep
 import RPi.GPIO as GPIO
 
@@ -39,7 +39,7 @@ class SensorProcess(Process):
             )
             sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
 
-            # sensors.add(lambda: sensors.send(), 1)
+            sensors.add(lambda: sensors.send(), 1)
 
             
             ### DON'T CHANGE ###
@@ -90,12 +90,14 @@ class ControlProcess(Process):
                     ctrl.qdm_check(0)
                 else:
                     # Receive commands and iterate through them
-                    if ctrl.getLaunchFlag()
+                    if ctrl.getLaunchFlag():
                         ctrl.ignition(mode)
-                    if ctrl.getQDMFlag()
+                    if ctrl.getQDMFlag():
                         ctrl.qdm_check(0)
-                    if ctrl.getAbortFlag()
+                    if ctrl.getAbortFlag():
                         ctrl.abort()
+					if ctrl.getStabFlag():
+						ctrl.stabilize()
                 sleep(1)
 #            ctrl.qdm_check(0)
 #            sleep(3)
