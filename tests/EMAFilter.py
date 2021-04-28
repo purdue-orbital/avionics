@@ -75,7 +75,7 @@ for j in range(1, 8):
 
     EMA.clear()
 
-
+#output to file using proper formatting
 outFile.write("time (s),gx (dps),gy (dps),gz (dps),ax (g),ay (g),az (g),temp (C)\n")
 for values in range(len(allValues[0])):
     outFile.write(str(allValues[0][values]) + ", " + str(allValues[1][values]) + ", " + str(allValues[2][values]) +
@@ -86,8 +86,10 @@ outFile.close()
 allValues.clear()
 
 
+
 EMAx = listoutput("EMAoutput.txt", 0)
 
+#plots for each data set
 for j in range(1, 8):
     EMAy = listoutput("EMAoutput.txt", j)
     y = listoutput("data.log", j)
