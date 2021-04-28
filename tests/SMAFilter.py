@@ -79,7 +79,7 @@ for j in range(1, 8):
     averages.clear()
 
 
-
+#output to file using proper formatting
 outFile.write("time (s),gx (dps),gy (dps),gz (dps),ax (g),ay (g),az (g),temp (C)\n")
 for values in range(len(allValues[0])):
     outFile.write(str(allValues[0][values]) + ", " + str(allValues[1][values]) + ", " + str(allValues[2][values]) +
@@ -92,6 +92,7 @@ allValues.clear()
 
 SMAx = listoutput("SMAoutput.txt", 0)
 
+#create plots for each data set
 for j in range(1, 8):
     SMAy = listoutput("SMAoutput.txt", j)
     y = listoutput("data.log", j)
