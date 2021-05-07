@@ -1,12 +1,10 @@
+
 import sys, os
 import json
 import time
 from threading import Thread, Event
 import logging
 import RPi.GPIO as GPIO
-
-from CommunicationsDriver import Comm
-
 
 # Import modules from ../lib and add ../logs to PATH
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -148,7 +146,7 @@ class Sensors:
             self.console.warning("Radio not initialized")
 
         self.console.info("Initialization complete")
-    def send(self, json):
+    def send(self):
         self.c.send(self.json)
 
     def __enter__(self):

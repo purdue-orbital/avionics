@@ -96,8 +96,8 @@ class ControlProcess(Process):
                         ctrl.qdm_check(0)
                     if ctrl.getAbortFlag():
                         ctrl.abort()
-					if ctrl.getStabFlag():
-						ctrl.stabilize()
+                    if ctrl.getStabFlag():
+                        ctrl.stabilize()
                 sleep(1)
 #            ctrl.qdm_check(0)
 #            sleep(3)

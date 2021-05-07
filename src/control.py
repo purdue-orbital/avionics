@@ -274,10 +274,8 @@ class Control:
             logging.info("QDM initiated")
 
     def connection_check(self):
-		return !self.commands.empty()
+        return not self.commands.empty()
     
-    def    
-
 if __name__ == "__main__":
     """
     Controls all command processes for the balloon flight computer.
