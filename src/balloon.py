@@ -80,7 +80,7 @@ class ControlProcess(Process):
                 # Control loop to determine radio disconnection
                 result = ctrl.connection_check()
                 endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
-                while ((result == None) & (datetime.now() < endT)):
+                while ((result == 0) & (datetime.now() < endT)):
                     result = ctrl.connection_check()
                     sleep(0.5)  # Don't overload CPU
 

@@ -8,9 +8,8 @@ import logging
 from math import atan, pi
 import RPi.GPIO as GPIO
 from array import *
+from datetime import datetime, timedelta
 
-
-#from Radio import Radio
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
 from CommunicationsDriver import Comm
@@ -88,7 +87,14 @@ class Control:
         self.json = None
         
         self.console.info("Initialization complete")
-
+    def getLaunchFlag(self):
+        return self.c.getLaunchFlag()
+    def getQDMFlag(self):
+        return self.c.getQDMFlag()
+    def getAbortFlag(self):
+        return self.c.getAbortFlag()
+    def getStabFlag(self):
+        return self.c.getStabFlag()
     def __enter__(self):
         return self
 
@@ -280,20 +286,22 @@ if __name__ == "__main__":
     """
     Controls all command processes for the balloon flight computer.
     """
+
     print("Running control.py ...\n")
 
     with Control("balloon") as ctrl:
         mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
-        # Can't collect data in only this file
-
+        # collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1) TODO if copying straight into balloon, uncomment 296 297
+        # collect.start()
         while True:
             # Control loop to determine radio disconnection
             result = ctrl.connection_check()
-            endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
-            while ((result == None) & (datetime.now() < endT)):
+            endT = datetime.now() + timedelta(seconds=5)  # Wait 5 seconds to reestablish signal TODO if copying straight into ballon, change to 500
+            print(endT) 
+            while ((result == 0) & (datetime.now() < endT)):
                 result = ctrl.connection_check()
-                sleep(0.5)  # Don't overload CPU
+                time.sleep(0.5)  # Don't overload CPU
 
             # These don't need to be parallel to the radio connection, since we won't
             # be getting commands if the radio is down
@@ -301,15 +309,11 @@ if __name__ == "__main__":
                 ctrl.qdm_check(0)
             else:
                 # Receive commands and iterate through them
-                ctrl.receive_data()
-                while not ctrl.commands.empty():
-                    GSDATA = ctrl.commands.get()
-
-                    CType = GSDATA['command']
-                    if (CType == 'QDM'):
-                        ctrl.qdm_check(0)
-                    # Are ignition and stabilize same signal?
-                    if (CType == 'Stabilize'):
-                        ctrl.stabilization()
-                    if (CType == 'Ignition'):
-                        ctrl.ignition(mode)
+                if ctrl.getLaunchFlag():
+                    ctrl.ignition(mode)
+                if ctrl.getQDMFlag():
+                    ctrl.qdm_check(0)
+                if ctrl.getAbortFlag():
+                    ctrl.abort()
+                if ctrl.getStabFlag():
+                    ctrl.stabilize()

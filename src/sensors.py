@@ -10,7 +10,6 @@ import RPi.GPIO as GPIO
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
-from Radio import Radio
 from CommunicationsDriver import Comm
 from mpu9 import MPU9250
 from ak89 import AK8963
@@ -148,7 +147,7 @@ class Sensors:
         self.console.info("Initialization complete")
     def send(self):
         self.c.send(self.json)
-
+    
     def __enter__(self):
         return self
         

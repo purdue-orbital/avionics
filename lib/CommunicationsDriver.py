@@ -1,8 +1,7 @@
 #! /usr/bin/python3.6
 import json
 
-from Mode import Mode
-from Radio import Radio 
+from RadioBeta import Radio 
 
 
 class Comm:
@@ -24,10 +23,11 @@ class Comm:
 
 
 class CommSingleton:
-    def __init__(self):
+    def __init__(self, DEBUG = 0, isGroundStation = False, hostname = '127.0.0.1'):
         try:
-            self.__radio = Radio() 
+            self.__radio = Radio(DEBUG, isGroundStation, hostname)
         except Exception as e:
+            print("EXCEPTION CAUGHT")
             print(e)
             
     def send(self, command):
