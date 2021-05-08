@@ -55,7 +55,7 @@ class Radio:
                         print("Queue unbound")
                         logging.error("Queue unbound")    
                 except Exception as e:
-                    print("Invalid message received")
+                    #print("Invalid message received")
                     logging.error(e)
 
         try: 
@@ -111,7 +111,7 @@ class Radio:
             exit()
 
         except Exception as e:
-            print("Here" + e)
+            print(e)
             logging.error(e)
             return 0
 

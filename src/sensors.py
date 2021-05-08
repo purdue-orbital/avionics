@@ -146,6 +146,7 @@ class Sensors:
 
         self.console.info("Initialization complete")
     def send(self):
+        print(type(self.c))
         self.c.send(self.json)
     
     def __enter__(self):

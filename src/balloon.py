@@ -90,6 +90,7 @@ class ControlProcess(Process):
                     ctrl.qdm_check(0)
                 else:
                     # Receive commands and iterate through them
+                    commands = ctrl.check_queue()
                     if ctrl.getLaunchFlag():
                         ctrl.ignition(mode)
                     if ctrl.getQDMFlag():

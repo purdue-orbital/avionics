@@ -2,8 +2,8 @@
 import json
 
 from RadioBeta import Radio 
-
-
+#from Radio import Radio
+#TODO make sure DEBUG = 1 at launch (check with jay if thats correct)
 class Comm:
     __instance = None
 
@@ -14,7 +14,6 @@ class Comm:
             Comm.__instance = CommSingleton()
 
     def get_instance(self):
-        print("get called")
         if Comm.__instance is None:
             print("first")
             Comm()
@@ -23,7 +22,7 @@ class Comm:
 
 
 class CommSingleton:
-    def __init__(self, DEBUG = 0, isGroundStation = False, hostname = '127.0.0.1'):
+    def __init__(self, DEBUG = 1, isGroundStation = True, hostname = '127.0.0.1'):
         try:
             self.__radio = Radio(DEBUG, isGroundStation, hostname)
         except Exception as e:
@@ -43,10 +42,14 @@ class CommSingleton:
         self.__radio.bindQueue(queue)
 
     def getLaunchFlag(self):
-        self.__radio.getLaunchFlag()
+        return self.__radio.getLaunchFlag()
     
     def getQDMFlag(self):
-        self.__radio.getQDMFlag()
+        return self.__radio.getQDMFlag()
     
     def getAbortFlag(self):
-        self.__radio.getAbortFlag()
+        return self.__radio.getAbortFlag()
+        
+    def getStabFlag(self):
+        return self.__radio.getStabFlag()
+

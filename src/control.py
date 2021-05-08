@@ -87,16 +87,25 @@ class Control:
         self.json = None
         
         self.console.info("Initialization complete")
+    
+    def check_queue(self):
+        return self.commands.get()        
+    
     def getLaunchFlag(self):
         return self.c.getLaunchFlag()
+
     def getQDMFlag(self):
         return self.c.getQDMFlag()
+
     def getAbortFlag(self):
         return self.c.getAbortFlag()
+
     def getStabFlag(self):
         return self.c.getStabFlag()
+
     def __enter__(self):
         return self
+
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
@@ -235,6 +244,7 @@ class Control:
                     logging.warn("Ignition(testing) not detected")
 
             elif (mode == 2):  # Ignite motor
+                print("Igniting Motor")
                 GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
                 time.sleep(5)  # tell rocket to start logging and give appropriate time
                 print("ign out")
@@ -253,6 +263,7 @@ class Control:
         self.c.send(data)
     def abort():
         logging.info("aborted")
+        print("Aborting")
         data = Control.generate_status_json()
         data["QDM"] = 3
         GPIO.cleanup()
@@ -298,7 +309,6 @@ if __name__ == "__main__":
             # Control loop to determine radio disconnection
             result = ctrl.connection_check()
             endT = datetime.now() + timedelta(seconds=5)  # Wait 5 seconds to reestablish signal TODO if copying straight into ballon, change to 500
-            print(endT) 
             while ((result == 0) & (datetime.now() < endT)):
                 result = ctrl.connection_check()
                 time.sleep(0.5)  # Don't overload CPU
