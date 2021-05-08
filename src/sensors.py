@@ -79,7 +79,7 @@ class Sensors:
             while not self.trigger.wait(1 / self.obj.freq):
                 self.obj.perform()
             
-    def __init__(self, name, imu_address=0x69, radio_port=None):
+    def __init__(self, name, imu_address=0x69, radio_port=True):
         # Set up debug logging
         self.console = logging.getLogger('sensors')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
@@ -146,8 +146,7 @@ class Sensors:
 
         self.console.info("Initialization complete")
     def send(self):
-        print(type(self.c))
-        self.c.send(self.json)
+       self.c.send(self.json)
     
     def __enter__(self):
         return self
