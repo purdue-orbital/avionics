@@ -6,9 +6,9 @@ import time
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 from RadioBeta import Radio
 
-gsradio = Radio(1, True)
-time.sleep(1)
 lsradio = Radio(1)
+time.sleep(1)
+gsradio = Radio(1, True)
 
 
 def recv():

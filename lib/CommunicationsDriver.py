@@ -7,22 +7,22 @@ from RadioBeta import Radio
 class Comm:
     __instance = None
 
-    def __init__(self):
+    def __init__(self, DEBUG, isGroundStation, hostname):
         if Comm.__instance is not None:
             raise Exception("Constructor should not be called")
         else:
-            Comm.__instance = CommSingleton()
+            Comm.__instance = CommSingleton(DEBUG, isGroundStation, hostname)
 
-    def get_instance(self):
+    def get_instance(self, DEBUG, isGroundStation, hostname):
         if Comm.__instance is None:
             print("first")
-            Comm()
+            Comm(DEBUG, isGroundStation, hostname)
         else: print("not first")
         return Comm.__instance
 
 
 class CommSingleton:
-    def __init__(self, DEBUG = 1, isGroundStation = True, hostname = '127.0.0.1'):
+    def __init__(self, DEBUG = 1, isGroundStation = False, hostname = '127.0.0.1'):
         try:
             self.__radio = Radio(DEBUG, isGroundStation, hostname)
         except Exception as e:

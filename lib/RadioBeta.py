@@ -24,7 +24,7 @@ class Radio:
         logging.basicConfig(level=(logging.INFO, logging.DEBUG)[self.DEBUG > 0], filename='mission.log', format='%(asctime)s %(levelname)s:%(message)s')
 
         def receive():
-            if self.isGroundStation:
+            if not self.isGroundStation:
                 self.socket.listen(300) #Listen for 5 minutes
                 (clientsocket, address) = self.socket.accept()
                 self.socket = clientsocket
@@ -55,7 +55,7 @@ class Radio:
                         print("Queue unbound")
                         logging.error("Queue unbound")    
                 except Exception as e:
-                    #print("Invalid message received")
+                    print("Invalid message received")
                     logging.error(e)
 
         try: 
@@ -64,7 +64,7 @@ class Radio:
                 self.socket.bind((('127.0.0.1', socket.gethostname()) [self.DEBUG != 1], 5000))
             else:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.socket.connect((self.hostname, 5000))
+                self.socket.connect(('127.0.0.1', 5000))
 
             thread.start_new_thread(receive, ())
         except Exception as e:
@@ -111,7 +111,6 @@ class Radio:
             exit()
 
         except Exception as e:
-            print(e)
             logging.error(e)
             return 0
 

@@ -136,7 +136,7 @@ class Sensors:
         
         if radio_port is not None:  # Create radio object if desired
             try:
-                self.c = Comm.get_instance(self)  # Initialize radio communication
+                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")  # Initialize radio communication
                 time.sleep(5)
             except Exception as e:
                 self.console.error(e)
