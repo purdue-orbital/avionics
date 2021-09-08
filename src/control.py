@@ -8,16 +8,18 @@ import logging
 from math import atan, pi
 import RPi.GPIO as GPIO
 from array import *
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 
-from RadioModule import Module
 from CommunicationsDriver import Comm
 
 QDM_PIN = 13
 IGNITION_PIN = 6
+IGNITION_DETECTION_PIN = 25
 ROCKET_LOG_PIN = 22
 STABILIZATION_PIN = 21
+
 
 class Control:
 
@@ -72,21 +74,41 @@ class Control:
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
         GPIO.setup(STABILIZATION_PIN, GPIO.OUT)
-        
+        GPIO.setup(IGNITION_DETECTION_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
         self.altitude = None
         # self.rocket = None
 
         time.sleep(2)
-        self.c = Comm.get_instance(self)
+        try:
+                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")
+        except Exception as e:
+                print(e)
         self.commands = queue.Queue(maxsize=10)
         self.c.bind(self.commands)
 
         self.json = None
         
         self.console.info("Initialization complete")
+    
+    def check_queue(self):
+        return self.commands.get()        
+    
+    def getLaunchFlag(self):
+        return self.c.getLaunchFlag()
+
+    def getQDMFlag(self):
+        return self.c.getQDMFlag()
+
+    def getAbortFlag(self):
+        return self.c.getAbortFlag()
+
+    def getStabFlag(self):
+        return self.c.getStabFlag()
 
     def __enter__(self):
         return self
+
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
@@ -136,7 +158,7 @@ class Control:
         # print("JSON: ", self.json)
         # hello = {"hello": 1}
         if self.json:
-            self.c.send(self.json, "balloon")
+            self.c.send(self.json)
 
     def lowpass_gyro(self):
         """
@@ -192,7 +214,7 @@ class Control:
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
         
-        self.c.send(data, "status")
+        self.c.send(data)
         
     def ignition(self, mode):
         '''
@@ -213,14 +235,19 @@ class Control:
         launch = True
         if launch:
             data["Ignition"] = 1
-
+            GPIO.add_event_detect(IGNITION_DETECTION_PIN, GPIO.RISING)
             if (mode == 1):  # testing mode (avoid igniting motor)
                 GPIO.output(IGNITION_PIN, GPIO.HIGH)
                 time.sleep(0.1)
                 GPIO.output(IGNITION_PIN, GPIO.LOW)
                 logging.info("Ignition initiated (testing)")
+                if GPIO.event_detected(IGNITION_DETECTION_PIN):
+                    logging.info("Ignition (testing) detected")
+                else:
+                    logging.warn("Ignition(testing) not detected")
 
             elif (mode == 2):  # Ignite motor
+                print("Igniting Motor")
                 GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
                 time.sleep(5)  # tell rocket to start logging and give appropriate time
                 print("ign out")
@@ -228,10 +255,21 @@ class Control:
                 time.sleep(10)  # Needs to be experimentally verified
                 GPIO.output(IGNITION_PIN, GPIO.LOW)
                 logging.info("Ignition initiated")
+                if GPIO.event_detected(IGNITION_DETECTION_PIN):
+                    logging.info("Ignition detected")
+                else:
+                    logging.warn("IGNITION not detected")
+
         else:
             logging.error("Ignition failed: altitude and/or spinrate not within tolerance")
 
-        self.c.send(data, "status")
+        self.c.send(data)
+    def abort():
+        logging.info("aborted")
+        print("Aborting")
+        data = Control.generate_status_json()
+        data["QDM"] = 3
+        GPIO.cleanup()
 
     def qdm_check(self, QDM):
         '''
@@ -252,32 +290,31 @@ class Control:
             data = Control.generate_status_json()
             data["QDM"] = 1
             print("qdm")
-            self.c.send(data, "status")
+            self.c.send(data)
             logging.info("QDM initiated")
 
     def connection_check(self):
-#        return self.c.remote_device
-        return True
+        return not self.commands.empty()
     
-
 if __name__ == "__main__":
     """
     Controls all command processes for the balloon flight computer.
     """
+
     print("Running control.py ...\n")
 
     with Control("balloon") as ctrl:
         mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
-        # Can't collect data in only this file
-
+        # collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1) TODO if copying straight into balloon, uncomment 296 297
+        # collect.start()
         while True:
             # Control loop to determine radio disconnection
             result = ctrl.connection_check()
-            endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
-            while ((result == None) & (datetime.now() < endT)):
+            endT = datetime.now() + timedelta(seconds=5)  # Wait 5 seconds to reestablish signal TODO if copying straight into ballon, change to 500
+            while ((result == 0) & (datetime.now() < endT)):
                 result = ctrl.connection_check()
-                sleep(0.5)  # Don't overload CPU
+                time.sleep(0.5)  # Don't overload CPU
 
             # These don't need to be parallel to the radio connection, since we won't
             # be getting commands if the radio is down
@@ -285,15 +322,11 @@ if __name__ == "__main__":
                 ctrl.qdm_check(0)
             else:
                 # Receive commands and iterate through them
-                ctrl.receive_data()
-                while not ctrl.commands.empty():
-                    GSDATA = ctrl.commands.get()
-
-                    CType = GSDATA['command']
-                    if (CType == 'QDM'):
-                        ctrl.qdm_check(0)
-                    # Are ignition and stabilize same signal?
-                    if (CType == 'Stabilize'):
-                        ctrl.stabilization()
-                    if (CType == 'Ignition'):
-                        ctrl.ignition(mode)
+                if ctrl.getLaunchFlag():
+                    ctrl.ignition(mode)
+                if ctrl.getQDMFlag():
+                    ctrl.qdm_check(0)
+                if ctrl.getAbortFlag():
+                    ctrl.abort()
+                if ctrl.getStabFlag():
+                    ctrl.stabilize()

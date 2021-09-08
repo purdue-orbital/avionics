@@ -1,3 +1,4 @@
+
 import sys, os
 import json
 import time
@@ -9,8 +10,7 @@ import RPi.GPIO as GPIO
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
-
-# from CommunicationsDriver import Comm
+from CommunicationsDriver import Comm
 from mpu9 import MPU9250
 from ak89 import AK8963
 from ds32 import DS3231
@@ -79,7 +79,7 @@ class Sensors:
             while not self.trigger.wait(1 / self.obj.freq):
                 self.obj.perform()
             
-    def __init__(self, name, imu_address=0x69, radio_port=None):
+    def __init__(self, name, imu_address=0x69, radio_port=True):
         # Set up debug logging
         self.console = logging.getLogger('sensors')
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
@@ -136,7 +136,7 @@ class Sensors:
         
         if radio_port is not None:  # Create radio object if desired
             try:
-                self.c = Comm.get_instance(self)  # Initialize radio communication
+                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")  # Initialize radio communication
                 time.sleep(5)
             except Exception as e:
                 self.console.error(e)
@@ -145,7 +145,9 @@ class Sensors:
             self.console.warning("Radio not initialized")
 
         self.console.info("Initialization complete")
-
+    def send(self):
+       self.c.send(self.json)
+    
     def __enter__(self):
         return self
         
@@ -378,7 +380,7 @@ if __name__ == "__main__":
 
         # sensors.add(lambda:sensors.pass_to(temp), 1)
         sensors.add(lambda: sensors.print(), 1)
-        # sensors.add(lambda: sensors.send(), 1)
+        sensors.add(lambda: sensors.send(), 1)
         
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
