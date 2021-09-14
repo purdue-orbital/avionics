@@ -39,7 +39,7 @@ class SensorProcess(Process):
             )
             sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
 
-            sensors.add(lambda: sensors.send(), 1)
+          #  sensors.add(lambda: sensors.send(), 1)
 
             
             ### DON'T CHANGE ###
@@ -78,27 +78,27 @@ class ControlProcess(Process):
 
             while True:
                 # Control loop to determine radio disconnection
-                result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
-                while ((result == 0) & (datetime.now() < endT)):
-                    result = ctrl.connection_check()
-                    sleep(0.5)  # Don't overload CPU
+           #     result = ctrl.connection_check()
+           #     endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
+           #     while ((result == 0) & (datetime.now() < endT)):
+           #         result = ctrl.connection_check()
+           #         sleep(0.5)  # Don't overload CPU
 
-                # These don't need to be parallel to the radio connection, since we won't
-                # be getting commands if the radio is down
-                if result == 0:
-                    ctrl.qdm_check(0)
-                else:
-                    # Receive commands and iterate through them
-                    commands = ctrl.check_queue()
-                    if ctrl.getLaunchFlag():
-                        ctrl.ignition(mode)
-                    if ctrl.getQDMFlag():
-                        ctrl.qdm_check(0)
-                    if ctrl.getAbortFlag():
-                        ctrl.abort()
-                    if ctrl.getStabFlag():
-                        ctrl.stabilize()
+           #     # These don't need to be parallel to the radio connection, since we won't
+           #     # be getting commands if the radio is down
+           #     if result == 0:
+           #         ctrl.qdm_check(0)
+           #     else:
+           #         # Receive commands and iterate through them
+           #         commands = ctrl.check_queue()
+           #         if ctrl.getLaunchFlag():
+           #             ctrl.ignition(mode)
+           #         if ctrl.getQDMFlag():
+           #             ctrl.qdm_check(0)
+           #         if ctrl.getAbortFlag():
+           #             ctrl.abort()
+           #         if ctrl.getStabFlag():
+           #             ctrl.stabilize()
                 sleep(1)
 #            ctrl.qdm_check(0)
 #            sleep(3)

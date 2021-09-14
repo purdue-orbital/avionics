@@ -80,14 +80,14 @@ class Control:
         # self.rocket = None
 
         time.sleep(2)
-        try:
-                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")
-        except Exception as e:
-                print(e)
-        self.commands = queue.Queue(maxsize=10)
-        self.c.bind(self.commands)
+       # try:
+       #         self.c = Comm.get_instance(self, 1, True, "127.0.0.1")
+       # except Exception as e:
+       #         print(e)
+       # self.commands = queue.Queue(maxsize=10)
+       # self.c.bind(self.commands)
 
-        self.json = None
+       # self.json = None
         
         self.console.info("Initialization complete")
     

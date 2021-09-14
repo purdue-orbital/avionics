@@ -134,15 +134,15 @@ class Sensors:
 
         self.list = self.SLL()
         
-        if radio_port is not None:  # Create radio object if desired
-            try:
-                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")  # Initialize radio communication
-                time.sleep(5)
-            except Exception as e:
-                self.console.error(e)
-        else:
-            self.c = None
-            self.console.warning("Radio not initialized")
+      #  if radio_port is not None:  # Create radio object if desired
+      #      try:
+      #          self.c = Comm.get_instance(self, 1, True, "127.0.0.1")  # Initialize radio communication
+      #          time.sleep(5)
+      #      except Exception as e:
+      #          self.console.error(e)
+      #  else:
+      #      self.c = None
+      #      self.console.warning("Radio not initialized")
 
         self.console.info("Initialization complete")
     def send(self):
