@@ -1,7 +1,7 @@
 #! /usr/bin/python3.6
 import json
 
-from RadioBeta import Radio 
+from radioapi.LSRadio import LSRadio as Radio 
 #from Radio import Radio
 #TODO make sure DEBUG = 1 at launch (check with jay if thats correct)
 class Comm:
