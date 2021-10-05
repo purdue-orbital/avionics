@@ -20,34 +20,34 @@ class SensorProcess(Process):
         print("Running sensors.py ...")
 
         with Sensors("balloon") as sensors:
-            # Lambda used to pass generic multi-arg functions to sensors.add
-            # These will later be executed in unique threads
-            sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
-                token="temp (C)", access=lambda: sensors.temperature()
-            )
+           # # Lambda used to pass generic multi-arg functions to sensors.add
+           # # These will later be executed in unique threads
+           # sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
+           #     token="temp (C)", access=lambda: sensors.temperature()
+           # )
 
-            sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
-                token="lat, long, alt (m)", access=lambda: sensors.gps()
-            )
+           # sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
+           #     token="lat, long, alt (m)", access=lambda: sensors.gps()
+           # )
 
-            sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
-                token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
-            )
+           # sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
+           #     token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+           # )
 
-            sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
-                token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
-            )
-            sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
+           # sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
+           #     token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+           # )
+           # sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
 
-            sensors.add(lambda: sensors.send(), 1)
+           # #sensors.add(lambda: sensors.send(), 1)
 
-            
-            ### DON'T CHANGE ###
-            sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
-            sensors.write_header()
-            sensors.add(lambda: sensors.write(), sensors.greatest)
-            sensors.stitch()
-            ### DON'T CHANGE ###
+           # 
+           # ### DON'T CHANGE ###
+           # sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
+           # sensors.write_header()
+           # sensors.add(lambda: sensors.write(), sensors.greatest)
+           # sensors.stitch()
+           # ### DON'T CHANGE ###
             
             while True:
                 sleep(1)
@@ -73,8 +73,8 @@ class ControlProcess(Process):
             mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
             # Data collection needs to be running parallel to rest of program
-            collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
-            collect.start()
+            #collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
+            #collect.start()
 
             while True:
                 # Control loop to determine radio disconnection
@@ -92,12 +92,19 @@ class ControlProcess(Process):
                     # Receive commands and iterate through them
                     commands = ctrl.check_queue()
                     if ctrl.getLaunchFlag():
+                        print("Launch")
                         ctrl.ignition(mode)
                     if ctrl.getQDMFlag():
+                        print("QDM")
+                        ctrl.ignition(mode)
                         ctrl.qdm_check(0)
                     if ctrl.getAbortFlag():
+                        print("Abort")
+                        ctrl.ignition(mode)
                         ctrl.abort()
                     if ctrl.getStabFlag():
+                        print("STab")
+                        ctrl.ignition(mode)
                         ctrl.stabilize()
                 sleep(1)
 #            ctrl.qdm_check(0)
@@ -122,10 +129,10 @@ if __name__ == "__main__":
         data = SensorProcess(lproxy)
         comm = ControlProcess(lproxy)
         # Start processes
-        data.start()
         comm.start()
+        #data.start()
         # Wait in main so that this can be escaped properly with ctrl+c
-        data.join()
+        #data.join()
         comm.join()
         
         while True:

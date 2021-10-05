@@ -3,28 +3,27 @@ import json
 
 from radioapi.LSRadio import LSRadio as Radio 
 #from Radio import Radio
-#TODO make sure DEBUG = 1 at launch (check with jay if thats correct)
 class Comm:
     __instance = None
 
-    def __init__(self, DEBUG, isGroundStation, hostname):
+    def __init__(self, DEBUG, hostname):
         if Comm.__instance is not None:
             raise Exception("Constructor should not be called")
         else:
-            Comm.__instance = CommSingleton(DEBUG, isGroundStation, hostname)
+            Comm.__instance = CommSingleton(DEBUG, hostname)
 
-    def get_instance(self, DEBUG, isGroundStation, hostname):
+    def get_instance(self, DEBUG, hostname):
         if Comm.__instance is None:
             print("first")
-            Comm(DEBUG, isGroundStation, hostname)
+            Comm(DEBUG, hostname)
         else: print("not first")
         return Comm.__instance
 
 
 class CommSingleton:
-    def __init__(self, DEBUG = 1, isGroundStation = False, hostname = '127.0.0.1'):
+    def __init__(self, DEBUG = 0, hostname = '127.0.0.1'):
         try:
-            self.__radio = Radio(DEBUG, isGroundStation, hostname)
+            self.__radio = Radio(DEBUG, hostname)
         except Exception as e:
             print("EXCEPTION CAUGHT")
             print(e)

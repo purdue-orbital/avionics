@@ -81,10 +81,13 @@ class Control:
 
         time.sleep(2)
         try:
-                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")
+            self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
+            print("Control Attempting Radio Connection")
+            time.sleep(5)
         except Exception as e:
                 print(e)
-        self.commands = queue.Queue(maxsize=10)
+        #self.commands = queue.Queue(maxsize=10)
+        self.commands = []
         self.c.bind(self.commands)
 
         self.json = None
@@ -92,18 +95,28 @@ class Control:
         self.console.info("Initialization complete")
     
     def check_queue(self):
-        return self.commands.get()        
+        command = self.commands.pop()
+        print(command)
+        return command 
     
     def getLaunchFlag(self):
+        if self.c.getLaunchFlag:
+            print("Launch Detected")
         return self.c.getLaunchFlag()
 
     def getQDMFlag(self):
+        if self.c.getQDMFlag:
+            print("QDM Detected")
         return self.c.getQDMFlag()
 
     def getAbortFlag(self):
+        if self.c.getAbortFlag:
+            print("Abort Detected")
         return self.c.getAbortFlag()
 
     def getStabFlag(self):
+        if self.c.getStabFlag:
+            print("Stabilize Detected")
         return self.c.getStabFlag()
 
     def __enter__(self):
@@ -306,8 +319,8 @@ if __name__ == "__main__":
     with Control("balloon") as ctrl:
         mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
-        # collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1) TODO if copying straight into balloon, uncomment 296 297
-        # collect.start()
+        #collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1) #TODO if copying straight into balloon, uncomment 296 297
+       # collect.start()
         while True:
             # Control loop to determine radio disconnection
             result = ctrl.connection_check()

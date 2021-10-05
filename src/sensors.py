@@ -136,7 +136,9 @@ class Sensors:
         
         if radio_port is not None:  # Create radio object if desired
             try:
-                self.c = Comm.get_instance(self, 1, True, "127.0.0.1")  # Initialize radio communication
+                #self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
+                self.c = Comm.get_instance(self)  # Initialize radio communication
+                print("Sensors Attempting Radio Connection") 
                 time.sleep(5)
             except Exception as e:
                 self.console.error(e)
@@ -214,7 +216,7 @@ class Sensors:
                 string.append(",".join([str(x) for x in head.access()]))
             head = head.next
 
-        print(",".join(string))
+        #print(",".join(string))
 
     def pass_to(self, manager, *args):
         """
