@@ -58,12 +58,13 @@ class Control:
         )
 
         self.console.info(f"\n\n### Starting {name} ###\n")
-        
+
         # Create a data queue
         self.gx_queue = deque([])
         self.gy_queue = deque([])
         self.gz_queue = deque([])
         self.time_queue = deque([])
+        self.communication_queue = None
 
         # GPIO SETUP
         GPIO.setmode(GPIO.BCM)
@@ -80,25 +81,30 @@ class Control:
         # self.rocket = None
 
         time.sleep(2)
-        try:
-            self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
-            print("Control Attempting Radio Connection")
-            time.sleep(5)
-        except Exception as e:
-                print(e)
+        # Communication singleton method for each process. However, there are
+        # two singletones for control.py and sensors.py. Can't communicate
+#        try:
+#            self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
+#            print("Control Attempting Radio Connection")
+#            time.sleep(5)
+#        except Exception as e:
+#                print(e)
         #self.commands = queue.Queue(maxsize=10)
-        self.commands = []
-        self.c.bind(self.commands)
+#        self.commands = []
+#        self.c.bind(self.commands)
 
-        self.json = None
-        
-        self.console.info("Initialization complete")
-    
+#        self.json = None
+
+#        self.console.info("Initialization complete")
+
+    def bind_queue(self, queue):
+        self.communication_queue = queue
+
     def check_queue(self):
-        command = self.commands.pop()
+        command = self.communication_queue.pop()
         print(command)
-        return command 
-    
+        return command
+
     def getLaunchFlag(self):
         if self.c.getLaunchFlag:
             print("Launch Detected")
@@ -149,12 +155,12 @@ class Control:
             gz = self.json['gyro']['z']
             # time = balloon['time']
 
-            if (len(list(self.gx_queue)) > 100): 
+            if (len(list(self.gx_queue)) > 100):
                 self.gx_queue.popleft()
                 self.gy_queue.popleft()
                 self.gz_queue.popleft()
                 # self.time_queue.popleft()
-            
+
             self.gx_queue.append(gx)
             self.gy_queue.append(gy)
             self.gz_queue.append(gz)
@@ -164,6 +170,7 @@ class Control:
 
             logging.debug("Data received")
 
+    #TODO: Change c.send to sending to the queue
     def send(self):
         """
         Sends most recent data collected over radio
@@ -204,13 +211,13 @@ class Control:
         altitude = (self.altitude<=25500) & (self.altitude >= 24500)
         spinrate = self.lowpass_gyro()
         logging.info(f"Altitude: {self.altitude}m - Spinrate: {spinrate}dps")
-        
+
 
         return (altitude & (spinrate < 5))
 
     def stabilization(self):
         """
-        Checks ability to stabilize, dependent on altitude. Sends update to 
+        Checks ability to stabilize, dependent on altitude. Sends update to
         ground station with action taken.
         """
         logging.info("Stabilization attempted")
@@ -226,9 +233,9 @@ class Control:
             logging.info("Stabilization initiated")
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
-        
+
         self.c.send(data)
-        
+
     def ignition(self, mode):
         '''
         This checks condition and starts ignition
@@ -308,7 +315,7 @@ class Control:
 
     def connection_check(self):
         return not self.commands.empty()
-    
+
 if __name__ == "__main__":
     """
     Controls all command processes for the balloon flight computer.

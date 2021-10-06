@@ -55,7 +55,7 @@ class Sensors:
         """
         def __init__(self):
             self.head = None
-        
+
         def add(self, node):
             if node.id is not None:  # Initialize sensors
                 node.perform()
@@ -78,7 +78,7 @@ class Sensors:
         def run(self):
             while not self.trigger.wait(1 / self.obj.freq):
                 self.obj.perform()
-            
+
     def __init__(self, name, imu_address=0x69, radio_port=True):
         # Set up debug logging
         self.console = logging.getLogger('sensors')
@@ -93,7 +93,7 @@ class Sensors:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(ROCKET_IN, GPIO.IN)
         GPIO.add_event_detect(ROCKET_IN, GPIO.FALLING, self.launch_detect)
-        
+
         self.name = name
         self.json = {
                       "origin": "balloon",
@@ -133,12 +133,12 @@ class Sensors:
         except: self.console.warning("NEO 7M GPS not initialized")
 
         self.list = self.SLL()
-        
+
         if radio_port is not None:  # Create radio object if desired
             try:
                 #self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
                 self.c = Comm.get_instance(self)  # Initialize radio communication
-                print("Sensors Attempting Radio Connection") 
+                print("Sensors Attempting Radio Connection")
                 time.sleep(5)
             except Exception as e:
                 self.console.error(e)
@@ -147,12 +147,14 @@ class Sensors:
             self.console.warning("Radio not initialized")
 
         self.console.info("Initialization complete")
+
+    #TODO: Change c.send to sending to the queue
     def send(self):
        self.c.send(self.json)
-    
+
     def __enter__(self):
         return self
-        
+
     def __exit__(self, exc_type, exc_value, traceback):
         """
         Specify cleanup procedure. Protects against most crashes
@@ -161,14 +163,14 @@ class Sensors:
         else: self.console.info("Sensors.py completed successfully.")
         GPIO.cleanup()
         self.log.close()
-    
+
     def launch_detect(self, callback):
         """
         Callback function for the ROCKET_IN pin
         """
         logging.info(f"Launch detected at mission time {self.time()[0]}")
         GPIO.remove_event_detect(ROCKET_IN)
-        
+
     def write_header(self):
         """
         Writes header for specified sensors to log file
@@ -182,14 +184,14 @@ class Sensors:
             head = head.next
 
         self.log.write(",".join(string) + "\n")
-        
+
     def write(self):
         """
         Writes specified sensors to log file
         """
         head = self.list.head
         string = []
-        
+
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
                 data = head.access()
@@ -210,7 +212,7 @@ class Sensors:
         """
         head = self.list.head
         string = []
-        
+
         while head is not None:
             if head.token is not None:  # Anything with a header
                 string.append(",".join([str(x) for x in head.access()]))
@@ -253,7 +255,7 @@ class Sensors:
         """
         head = self.list.head
         min = head.freq
-        
+
         while head is not None:
             if (head.freq < min): min = head.freq
             head = head.next
@@ -267,7 +269,7 @@ class Sensors:
         """
         head = self.list.head
         max = head.freq
-        
+
         while head is not None:
             if (head.freq > max): max = head.freq
             head = head.next
@@ -287,7 +289,7 @@ class Sensors:
             self.console.info(f"Spawning thread {head.id} with frequency {head.freq} Hz...")
             t = self.IntThread(head)
             t.start()
-            
+
             head = head.next
 
     def time(self):
@@ -309,7 +311,7 @@ class Sensors:
                 self.console.error(e)
                 self._gps = (-999, -999, -999)
         else: return self._gps
-        
+
     def accel(self, write=False):
         """
         Reads acceleration from the MPU9250 chip
@@ -333,7 +335,7 @@ class Sensors:
                 self.console.error(e)
                 self._gyro = (-999, -999, -999)
         else: return self._gyro
-                
+
     def magnet(self, write=False):
         """
         Read magnetometer data from the MPU9250 chip
@@ -345,7 +347,7 @@ class Sensors:
                 self.console.error(e)
                 self._magnet = (-999, -999, -999)
         else: return self._magnet
-        
+
     def temperature(self, write=False):
         """
         Reads temperature data from the MS5611 chip
@@ -358,6 +360,8 @@ class Sensors:
                 self._temperature = (-999,)
         else: return self._temperature
 
+    def bind_queue(self, queue):
+        self.communciation_queue = queue
 
 if __name__ == "__main__":
     with Sensors("balloon", radio_port="true") as sensors:
@@ -383,13 +387,13 @@ if __name__ == "__main__":
         # sensors.add(lambda:sensors.pass_to(temp), 1)
         sensors.add(lambda: sensors.print(), 1)
         sensors.add(lambda: sensors.send(), 1)
-        
+
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
         sensors.write_header()
         sensors.add(lambda: sensors.write(), sensors.greatest)
         sensors.stitch()
         ### DON'T CHANGE ###
-        
+
         while True:
             time.sleep(1)

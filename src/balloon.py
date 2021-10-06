@@ -2,14 +2,17 @@ from multiprocessing import Process, Manager, Event
 from datetime import datetime, timedelta
 from sensors import Sensors
 from control import Control
+from .lib.CommunicationDriver import Communication
 from time import sleep
 import RPi.GPIO as GPIO
 
+
 class SensorProcess(Process):
-    def __init__(self, lproxy):
+    def __init__(self, lproxy, queue):
         Process.__init__(self)
         self.exit = Event()
         self.proxy = lproxy
+        self.communication_queue = queue
 
     def run(self):
         """
@@ -41,27 +44,32 @@ class SensorProcess(Process):
 
            # #sensors.add(lambda: sensors.send(), 1)
 
-           # 
+           #
            # ### DON'T CHANGE ###
            # sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
            # sensors.write_header()
            # sensors.add(lambda: sensors.write(), sensors.greatest)
            # sensors.stitch()
            # ### DON'T CHANGE ###
-            
-            while True:
-                sleep(1)
-    
+
+           # Check if CommunicationsProcess has a queue
+           sensors.bind_queue(self.communication_queue)
+
+           while True:
+               sleep(1)
+
     def shutdown(self):
         print("Killing SensorProcess...")
         self.exit.set()
         print("SensorProcess killed.")
 
+
 class ControlProcess(Process):
-    def __init__(self, lproxy):
+    def __init__(self, lproxy, queue):
         Process.__init__(self)
         self.exit = Event()
         self.proxy = lproxy
+        self.communication_queue = queue
 
     def run(self):
         """
@@ -75,6 +83,8 @@ class ControlProcess(Process):
             # Data collection needs to be running parallel to rest of program
             #collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
             #collect.start()
+
+            self.bind_queue(self.communication_queue)
 
             while True:
                 # Control loop to determine radio disconnection
@@ -117,6 +127,25 @@ class ControlProcess(Process):
         print("ControlProcess killed.")
 
 
+class CommunicationProcess(Process):
+    def __init__(self):
+        Process.__init__(self)
+        self.exit = Event()
+        self.proxy = lproxy
+        self.queue = []
+
+    def run(self):
+        print("Running CommunicationDriver.py.")
+
+        with Comm(DEBUG=True) as communication:
+            communication.bindQueue(self.queue)
+
+    def shutdown(self):
+        print("Killing CommunicationProcess...")
+        self.exit.set()
+        print("CommunicationProcess killed.")
+
+
 if __name__ == "__main__":
     try:
         # Create Manager() for dict (which is stored in a list)
@@ -126,18 +155,20 @@ if __name__ == "__main__":
         lproxy.append({})
 
         # Assign each function to a Process
-        data = SensorProcess(lproxy)
-        comm = ControlProcess(lproxy)
+        communication = CommunicationProcess(lproxy)
+        queue = communication.queue
+        data = SensorProcess(lproxy, queue)
+        comm = ControlProcess(lproxy, queue)
         # Start processes
         comm.start()
         #data.start()
         # Wait in main so that this can be escaped properly with ctrl+c
         #data.join()
         comm.join()
-        
+
         while True:
             sleep(2)
-            
+
     finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
         data.shutdown()
