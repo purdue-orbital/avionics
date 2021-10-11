@@ -24,6 +24,7 @@ class CommSingleton:
     def __init__(self, DEBUG = 0, hostname = '127.0.0.1'):
         try:
             self.__radio = Radio(DEBUG, hostname)
+            self.__arm = False
         except Exception as e:
             print("EXCEPTION CAUGHT")
             print(e)
@@ -51,4 +52,12 @@ class CommSingleton:
         
     def getStabFlag(self):
         return self.__radio.getStabFlag()
+
+    @property
+    def arm(self):
+        return self.__arm
+      
+    @arm.setter
+    def arm(self, arm):
+        self.__arm = arm
 

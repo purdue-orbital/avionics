@@ -4,6 +4,7 @@ from sensors import Sensors
 from control import Control
 from time import sleep
 import RPi.GPIO as GPIO
+import json
 
 class SensorProcess(Process):
     def __init__(self, lproxy):
@@ -75,11 +76,18 @@ class ControlProcess(Process):
             # Data collection needs to be running parallel to rest of program
             #collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
             #collect.start()
+            while not ctrl.arm():
+                print("Unarmed")
+                if ctrl.connection_check():
+                    command = json.loads(ctrl.check_queue())
+                    ctrl.arm(command["ARMED"]) 
+                sleep(1)
 
+            print("ARMED")
             while True:
                 # Control loop to determine radio disconnection
                 result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(seconds=10)  # Wait 5 min. to reestablish signal
                 while ((result == 0) & (datetime.now() < endT)):
                     result = ctrl.connection_check()
                     sleep(0.5)  # Don't overload CPU
@@ -92,20 +100,17 @@ class ControlProcess(Process):
                     # Receive commands and iterate through them
                     commands = ctrl.check_queue()
                     if ctrl.getLaunchFlag():
-                        print("Launch")
+                        print("Launch Detected")
                         ctrl.ignition(mode)
                     if ctrl.getQDMFlag():
-                        print("QDM")
-                        ctrl.ignition(mode)
+                        print("QDM Detected")
                         ctrl.qdm_check(0)
                     if ctrl.getAbortFlag():
-                        print("Abort")
-                        ctrl.ignition(mode)
+                        print("Abort Detected")
                         ctrl.abort()
                     if ctrl.getStabFlag():
-                        print("STab")
-                        ctrl.ignition(mode)
-                        ctrl.stabilize()
+                        print("Stabilize Detected")
+                        ctrl.stabilization()
                 sleep(1)
 #            ctrl.qdm_check(0)
 #            sleep(3)

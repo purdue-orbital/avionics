@@ -40,14 +40,15 @@ class Control:
             while not self.trigger.wait(1 / self.freq):
                 self.fn()
 
-    @staticmethod
-    def generate_status_json():
-        json = {}
-        json["origin"] = "status"
-        json["QDM"] = 0
-        json["Ignition"] = 0
-        json["Stabilization"] = 0
-        return json
+    def generate_status_json(self):
+        state = {                
+                "LAUNCH": self.c.getLaunchFlag(),
+                "QDM": self.c.getQDMFlag(),
+                "ABORT": self.c.getAbortFlag(),
+                "STAB": self.c.getStabFlag(),
+                "ARMED": self.c.arm
+        }
+        return state 
 
     def __init__(self, name):
         # Set up info logging
@@ -81,7 +82,7 @@ class Control:
 
         time.sleep(2)
         try:
-            self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
+            self.c = Comm.get_instance(self, 1, "0.0.0.0")  # Initialize radio communication
             print("Control Attempting Radio Connection")
             time.sleep(5)
         except Exception as e:
@@ -89,35 +90,32 @@ class Control:
         #self.commands = queue.Queue(maxsize=10)
         self.commands = []
         self.c.bind(self.commands)
-
         self.json = None
         
         self.console.info("Initialization complete")
     
     def check_queue(self):
-        command = self.commands.pop()
-        print(command)
+        command = self.commands.pop(0)
         return command 
     
     def getLaunchFlag(self):
-        if self.c.getLaunchFlag:
-            print("Launch Detected")
         return self.c.getLaunchFlag()
 
     def getQDMFlag(self):
-        if self.c.getQDMFlag:
-            print("QDM Detected")
         return self.c.getQDMFlag()
 
     def getAbortFlag(self):
-        if self.c.getAbortFlag:
-            print("Abort Detected")
         return self.c.getAbortFlag()
 
     def getStabFlag(self):
-        if self.c.getStabFlag:
-            print("Stabilize Detected")
         return self.c.getStabFlag()
+
+    def arm(self,arm=False):
+        if arm:
+            self.c.arm = True
+        status = self.generate_status_json()
+        self.c.send(status)
+        return self.c.arm
 
     def __enter__(self):
         return self
@@ -171,7 +169,8 @@ class Control:
         # print("JSON: ", self.json)
         # hello = {"hello": 1}
         if self.json:
-            self.c.send(self.json)
+            #self.c.send(self.json)
+            return 
 
     def lowpass_gyro(self):
         """
@@ -217,12 +216,12 @@ class Control:
         # Bounds hard-coded for "ease" of manipulation (not worth the effort)
         # condition = (self.altitude<=25500) & (self.altitude >= 24500)
         condition = True
-        data = Control.generate_status_json()
+        data = self.generate_status_json()
 
         if (condition):
             GPIO.output(STABILIZATION_PIN, GPIO.HIGH)
             print("stabilization")
-            data["Stabilization"] = 1
+            data["STAB"] = True 
             logging.info("Stabilization initiated")
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
@@ -242,7 +241,7 @@ class Control:
         return void
         '''
         logging.info("Ignition attempted")
-        data = Control.generate_status_json()
+        data = self.generate_status_json()
 
         # launch = self.launch_condition()
         launch = True
@@ -277,10 +276,10 @@ class Control:
             logging.error("Ignition failed: altitude and/or spinrate not within tolerance")
 
         self.c.send(data)
-    def abort():
+    def abort(self):
         logging.info("aborted")
         print("Aborting")
-        data = Control.generate_status_json()
+        data = self.generate_status_json()
         data["QDM"] = 3
         GPIO.cleanup()
 
@@ -300,14 +299,14 @@ class Control:
         else:
             GPIO.output(QDM_PIN, GPIO.HIGH)
 
-            data = Control.generate_status_json()
-            data["QDM"] = 1
+            data = self.generate_status_json()
+            data["QDM"] = True 
             print("qdm")
             self.c.send(data)
             logging.info("QDM initiated")
 
     def connection_check(self):
-        return not self.commands.empty()
+        return not self.commands == []
     
 if __name__ == "__main__":
     """
