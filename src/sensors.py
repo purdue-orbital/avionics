@@ -4,7 +4,7 @@ import json
 import time
 from threading import Thread, Event
 import logging
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 
 # Import modules from ../lib and add ../logs to PATH
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -90,9 +90,9 @@ class Sensors:
         self.console.info(f"\n\n### Starting {name} ###\n")
 
         #on init, setup the rocket input pin and its event handler
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(ROCKET_IN, GPIO.IN)
-        GPIO.add_event_detect(ROCKET_IN, GPIO.FALLING, self.launch_detect)
+ #       GPIO.setmode(GPIO.BCM)
+  #      GPIO.setup(ROCKET_IN, GPIO.IN)
+   #     GPIO.add_event_detect(ROCKET_IN, GPIO.FALLING, self.launch_detect)
         
         self.name = name
         self.json = {
@@ -157,7 +157,7 @@ class Sensors:
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
         else: self.console.info("Sensors.py completed successfully.")
-        GPIO.cleanup()
+        #GPIO.cleanup()
         self.log.close()
     
     def launch_detect(self, callback):
@@ -165,7 +165,7 @@ class Sensors:
         Callback function for the ROCKET_IN pin
         """
         logging.info(f"Launch detected at mission time {self.time()[0]}")
-        GPIO.remove_event_detect(ROCKET_IN)
+        #GPIO.remove_event_detect(ROCKET_IN)
         
     def write_header(self):
         """

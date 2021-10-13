@@ -1,4 +1,4 @@
-import zmq
+#import zmq
 import _thread as thread
 import os
 import json

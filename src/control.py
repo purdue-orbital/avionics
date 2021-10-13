@@ -6,7 +6,6 @@ from collections import deque
 from threading import Thread, Event
 import logging
 from math import atan, pi
-import RPi.GPIO as GPIO
 from array import *
 from datetime import datetime, timedelta
 
@@ -66,15 +65,15 @@ class Control:
         self.time_queue = deque([])
 
         # GPIO SETUP
-        GPIO.setmode(GPIO.BCM)
+        #GPIO.setmode(GPIO.BCM)
 
-        GPIO.setup(QDM_PIN, GPIO.OUT)
-        GPIO.output(QDM_PIN, GPIO.LOW)  # Turn on QDM dead switch
-        GPIO.setup(IGNITION_PIN, GPIO.OUT)
-        GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
-        GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
-        GPIO.setup(STABILIZATION_PIN, GPIO.OUT)
-        GPIO.setup(IGNITION_DETECTION_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        #GPIO.setup(QDM_PIN, GPIO.OUT)
+        #GPIO.output(QDM_PIN, GPIO.LOW)  # Turn on QDM dead switch
+        #GPIO.setup(IGNITION_PIN, GPIO.OUT)
+        #GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
+        #GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
+        #GPIO.setup(STABILIZATION_PIN, GPIO.OUT)
+        #GPIO.setup(IGNITION_DETECTION_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
         self.altitude = None
         # self.rocket = None
@@ -116,7 +115,7 @@ class Control:
         """
         if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
         else: self.console.info("Control.py completed successfully.")
-        GPIO.cleanup()
+        #GPIO.cleanup()
 
     def read_data(self, proxy):
         '''
@@ -207,7 +206,7 @@ class Control:
         data = Control.generate_status_json()
 
         if (condition):
-            GPIO.output(STABILIZATION_PIN, GPIO.HIGH)
+         #   GPIO.output(STABILIZATION_PIN, GPIO.HIGH)
             print("stabilization")
             data["Stabilization"] = 1
             logging.info("Stabilization initiated")
@@ -235,30 +234,30 @@ class Control:
         launch = True
         if launch:
             data["Ignition"] = 1
-            GPIO.add_event_detect(IGNITION_DETECTION_PIN, GPIO.RISING)
+          #  GPIO.add_event_detect(IGNITION_DETECTION_PIN, GPIO.RISING)
             if (mode == 1):  # testing mode (avoid igniting motor)
-                GPIO.output(IGNITION_PIN, GPIO.HIGH)
+           #     GPIO.output(IGNITION_PIN, GPIO.HIGH)
                 time.sleep(0.1)
-                GPIO.output(IGNITION_PIN, GPIO.LOW)
+            #    GPIO.output(IGNITION_PIN, GPIO.LOW)
                 logging.info("Ignition initiated (testing)")
-                if GPIO.event_detected(IGNITION_DETECTION_PIN):
-                    logging.info("Ignition (testing) detected")
-                else:
-                    logging.warn("Ignition(testing) not detected")
+             #   if GPIO.event_detected(IGNITION_DETECTION_PIN):
+              #      logging.info("Ignition (testing) detected")
+              #  else:
+                logging.warn("Ignition(testing) not detected")
 
             elif (mode == 2):  # Ignite motor
                 print("Igniting Motor")
-                GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
+               # GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
                 time.sleep(5)  # tell rocket to start logging and give appropriate time
                 print("ign out")
-                GPIO.output(IGNITION_PIN, GPIO.HIGH)
+               # GPIO.output(IGNITION_PIN, GPIO.HIGH)
                 time.sleep(10)  # Needs to be experimentally verified
-                GPIO.output(IGNITION_PIN, GPIO.LOW)
+                #GPIO.output(IGNITION_PIN, GPIO.LOW)
                 logging.info("Ignition initiated")
-                if GPIO.event_detected(IGNITION_DETECTION_PIN):
-                    logging.info("Ignition detected")
-                else:
-                    logging.warn("IGNITION not detected")
+               # if GPIO.event_detected(IGNITION_DETECTION_PIN):
+                #    logging.info("Ignition detected")
+        #        else:
+                logging.warn("IGNITION not detected")
 
         else:
             logging.error("Ignition failed: altitude and/or spinrate not within tolerance")
@@ -269,7 +268,7 @@ class Control:
         print("Aborting")
         data = Control.generate_status_json()
         data["QDM"] = 3
-        GPIO.cleanup()
+       # GPIO.cleanup()
 
     def qdm_check(self, QDM):
         '''
@@ -282,16 +281,16 @@ class Control:
         return void
         '''
 
-        if QDM:
-            GPIO.output(QDM_PIN, GPIO.LOW)
-        else:
-            GPIO.output(QDM_PIN, GPIO.HIGH)
+      #  if QDM:
+        #    GPIO.output(QDM_PIN, GPIO.LOW)
+       # else:
+         #   GPIO.output(QDM_PIN, GPIO.HIGH)
 
-            data = Control.generate_status_json()
-            data["QDM"] = 1
-            print("qdm")
-            self.c.send(data)
-            logging.info("QDM initiated")
+        data = Control.generate_status_json()
+        data["QDM"] = 1
+        print("qdm")
+        self.c.send(data)
+        logging.info("QDM initiated")
 
     def connection_check(self):
         return not self.commands.empty()

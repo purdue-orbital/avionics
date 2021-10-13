@@ -1,5 +1,5 @@
 from i2c_device import I2CDevice
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 from time import sleep
 
 ### ADDRESSES ###
@@ -17,9 +17,9 @@ class DS3231(I2CDevice):
         super(DS3231, self).__init__(DS32_ADDRESS, name)
         self.time = 0
 
-        GPIO.setmode(GPIO.BCM)
+        #GPIO.setmode(GPIO.BCM)
         # Set GPIO pin to read clock interrupt
-        GPIO.setup(CLOCK_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        #GPIO.setup(CLOCK_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         # Sets 1.024 kHz mode for square wave on SQW pin
         self.write(CONTROL_REGISTER, 0b01101000)
@@ -28,7 +28,7 @@ class DS3231(I2CDevice):
             raise ValueError("DS3231 mode not set correctly!")
         
         # Create read thread for INT pin (17)
-        GPIO.add_event_detect(CLOCK_PIN, GPIO.RISING, callback=self.tick)
+       # GPIO.add_event_detect(CLOCK_PIN, GPIO.RISING, callback=self.tick)
 
         
     def tick(self, channel):
@@ -54,8 +54,8 @@ class DS3231(I2CDevice):
         self._temp = value
 
     def __del__(self):
-        GPIO.cleanup(self.pin)
-
+       # GPIO.cleanup(self.pin)
+       pass
         
 if __name__ == "__main__":    
     clock = DS3231("DS3231")
