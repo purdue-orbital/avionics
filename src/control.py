@@ -19,6 +19,7 @@ IGNITION_PIN = 6
 IGNITION_DETECTION_PIN = 25
 ROCKET_LOG_PIN = 22
 STABILIZATION_PIN = 21
+# RIPD_PIN = 29
 
 
 class Control:
@@ -70,7 +71,7 @@ class Control:
         GPIO.setmode(GPIO.BCM)
 
         GPIO.setup(QDM_PIN, GPIO.OUT)
-        GPIO.output(QDM_PIN, GPIO.LOW)  # Turn on QDM dead switch
+        GPIO.output(QDM_PIN, GPIO.HIGH)  # Turn on QDM dead switch
         GPIO.setup(IGNITION_PIN, GPIO.OUT)
         GPIO.setup(ROCKET_LOG_PIN, GPIO.OUT)
         GPIO.output(ROCKET_LOG_PIN, GPIO.HIGH)
@@ -91,9 +92,23 @@ class Control:
         self.commands = []
         self.c.bind(self.commands)
         self.json = None
-        
+
+        # on start switch
+        self.endT = datetime.now() + timedelta(seconds=100)  # Wait 5 seconds to reestablish signal 
+        print("self.endT")
+        self.ground_abort = 0
         self.console.info("Initialization complete")
-    
+
+    def groundAbort(self, abort=0):                                                                  
+        if abort:       
+            self.ground_abort = 1
+        return self.ground_abort 
+
+    def safetyTimer(self):                                                                           
+        if (datetime.now() > self.endT) and (not self.ground_abort):
+            print("safety_timer")
+            self.qdm_check(1)
+   
     def check_queue(self):
         command = self.commands.pop(0)
         return command 
@@ -145,20 +160,20 @@ class Control:
             gx = self.json['gyro']['x']
             gy = self.json['gyro']['y']
             gz = self.json['gyro']['z']
-            # time = balloon['time']
+            time = balloon['time']
 
             if (len(list(self.gx_queue)) > 100): 
                 self.gx_queue.popleft()
                 self.gy_queue.popleft()
                 self.gz_queue.popleft()
-                # self.time_queue.popleft()
+                self.time_queue.popleft()
             
             self.gx_queue.append(gx)
             self.gy_queue.append(gy)
             self.gz_queue.append(gz)
-            # self.time_queue.append(time)
+            self.time_queue.append(time)
 
-            # print(f"{time} : {gx},{gy},{gz}")
+            print(f"{time} : {gx},{gy},{gz}")
 
             logging.debug("Data received")
 
@@ -204,8 +219,6 @@ class Control:
         spinrate = self.lowpass_gyro()
         logging.info(f"Altitude: {self.altitude}m - Spinrate: {spinrate}dps")
         
-
-        return (altitude & (spinrate < 5))
 
     def stabilization(self):
         """
@@ -277,6 +290,7 @@ class Control:
 
         self.c.send(data)
     def abort(self):
+        self.abort = 1
         logging.info("aborted")
         print("Aborting")
         data = self.generate_status_json()
@@ -296,14 +310,13 @@ class Control:
 
         if QDM:
             GPIO.output(QDM_PIN, GPIO.LOW)
+            data = self.generate_status_json()
+            data["QDM"] = True 
+            self.c.send(data)
+            logging.info("QDM initiated")
         else:
             GPIO.output(QDM_PIN, GPIO.HIGH)
 
-            data = self.generate_status_json()
-            data["QDM"] = True 
-            print("qdm")
-            self.c.send(data)
-            logging.info("QDM initiated")
 
     def connection_check(self):
         return not self.commands == []

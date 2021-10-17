@@ -10,7 +10,6 @@ import RPi.GPIO as GPIO
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
 sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
-from CommunicationsDriver import Comm
 from mpu9 import MPU9250
 from ak89 import AK8963
 from ds32 import DS3231
@@ -134,21 +133,8 @@ class Sensors:
 
         self.list = self.SLL()
         
-        if radio_port is not None:  # Create radio object if desired
-            try:
-                #self.c = Comm.get_instance(self, 1, "127.0.0.1")  # Initialize radio communication
-                self.c = Comm.get_instance(self)  # Initialize radio communication
-                print("Sensors Attempting Radio Connection") 
-                time.sleep(5)
-            except Exception as e:
-                self.console.error(e)
-        else:
-            self.c = None
-            self.console.warning("Radio not initialized")
 
         self.console.info("Initialization complete")
-    def send(self):
-       self.c.send(self.json)
     
     def __enter__(self):
         return self

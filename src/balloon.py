@@ -21,34 +21,34 @@ class SensorProcess(Process):
         print("Running sensors.py ...")
 
         with Sensors("balloon") as sensors:
-           # # Lambda used to pass generic multi-arg functions to sensors.add
-           # # These will later be executed in unique threads
-           # sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
-           #     token="temp (C)", access=lambda: sensors.temperature()
-           # )
+            # Lambda used to pass generic multi-arg functions to sensors.add
+            # These will later be executed in unique threads
+            sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
+                token="temp (C)", access=lambda: sensors.temperature()
+            )
 
-           # sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
-           #     token="lat, long, alt (m)", access=lambda: sensors.gps()
-           # )
+            sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
+                token="lat, long, alt (m)", access=lambda: sensors.gps()
+            )
 
-           # sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
-           #     token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
-           # )
+            sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
+                token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+            )
 
-           # sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
-           #     token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
-           # )
-           # sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
+            sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
+                token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+            )
+            sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
 
-           # #sensors.add(lambda: sensors.send(), 1)
+            #sensors.add(lambda: sensors.send(), 1)
 
-           # 
-           # ### DON'T CHANGE ###
-           # sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
-           # sensors.write_header()
-           # sensors.add(lambda: sensors.write(), sensors.greatest)
-           # sensors.stitch()
-           # ### DON'T CHANGE ###
+            
+            ### DON'T CHANGE ###
+            sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
+            sensors.write_header()
+            sensors.add(lambda: sensors.write(), sensors.greatest)
+            sensors.stitch()
+            ### DON'T CHANGE ###
             
             while True:
                 sleep(1)
@@ -74,10 +74,10 @@ class ControlProcess(Process):
             mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
             # Data collection needs to be running parallel to rest of program
-            #collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
-            #collect.start()
+            collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
+            collect.start()
             while not ctrl.arm():
-                print("Unarmed")
+                ctrl.safetyTimer()
                 if ctrl.connection_check():
                     command = json.loads(ctrl.check_queue())
                     ctrl.arm(command["ARMED"]) 
@@ -86,16 +86,18 @@ class ControlProcess(Process):
             print("ARMED")
             while True:
                 # Control loop to determine radio disconnection
+                ctrl.safetyTimer()
                 result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(seconds=10)  # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(hours=2)  # Wait 5 min. to reestablish signal
                 while ((result == 0) & (datetime.now() < endT)):
+                    ctrl.safetyTimer()
                     result = ctrl.connection_check()
                     sleep(0.5)  # Don't overload CPU
 
                 # These don't need to be parallel to the radio connection, since we won't
-                # be getting commands if the radio is down
-                if result == 0:
-                    ctrl.qdm_check(0)
+                # be getting commands if the radjjio is down
+                if result == 0 and (not ctrl.groundAbort()):
+                    ctrl.qdm_check(1)
                 else:
                     # Receive commands and iterate through them
                     commands = ctrl.check_queue()
@@ -104,10 +106,10 @@ class ControlProcess(Process):
                         ctrl.ignition(mode)
                     if ctrl.getQDMFlag():
                         print("QDM Detected")
-                        ctrl.qdm_check(0)
+                        ctrl.qdm_check(1)
                     if ctrl.getAbortFlag():
                         print("Abort Detected")
-                        ctrl.abort()
+                        ctrl.groundAbort(1)
                     if ctrl.getStabFlag():
                         print("Stabilize Detected")
                         ctrl.stabilization()
