@@ -31,11 +31,11 @@ class SensorProcess(Process):
                 token="lat, long, alt (m)", access=lambda: sensors.gps()
             )
 
-            sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
+            sensors.add(lambda: sensors.accel(write=True), 2, identity="acc",
                 token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
             )
 
-            sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
+            sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
                 token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
             )
             sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
@@ -88,7 +88,7 @@ class ControlProcess(Process):
                 # Control loop to determine radio disconnection
                 ctrl.safetyTimer()
                 result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(hours=2)  # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(minutes=45)  # Wait 5 min. to reestablish signal
                 while ((result == 0) & (datetime.now() < endT)):
                     ctrl.safetyTimer()
                     result = ctrl.connection_check()
@@ -137,9 +137,9 @@ if __name__ == "__main__":
         comm = ControlProcess(lproxy)
         # Start processes
         comm.start()
-        #data.start()
+        data.start()
         # Wait in main so that this can be escaped properly with ctrl+c
-        #data.join()
+        data.join()
         comm.join()
         
         while True:

@@ -94,7 +94,7 @@ class Control:
         self.json = None
 
         # on start switch
-        self.endT = datetime.now() + timedelta(seconds=100)  # Wait 5 seconds to reestablish signal 
+        self.endT = datetime.now() + timedelta(minutes=150)  # Wait 5 seconds to reestablish signal 
         print("self.endT")
         self.ground_abort = 0
         self.console.info("Initialization complete")
