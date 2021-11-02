@@ -35,7 +35,7 @@ class Control:
             # Could be used to prematurely stop thread using self.trigger.set()
             self.trigger = Event()
             self.fn = function
-            self.freq = freq
+            self.freq = freq 
 
         def run(self):
             while not self.trigger.wait(1 / self.freq):
@@ -160,7 +160,7 @@ class Control:
             gx = self.json['gyro']['x']
             gy = self.json['gyro']['y']
             gz = self.json['gyro']['z']
-            time = balloon['time']
+            #time = balloon['time']
 
             if (len(list(self.gx_queue)) > 100): 
                 self.gx_queue.popleft()
@@ -173,7 +173,7 @@ class Control:
             self.gz_queue.append(gz)
             self.time_queue.append(time)
 
-            print(f"{time} : {gx},{gy},{gz}")
+            #print(f"{time} : {gx},{gy},{gz}")
 
             logging.debug("Data received")
 
@@ -181,9 +181,8 @@ class Control:
         """
         Sends most recent data collected over radio
         """
-        # print("JSON: ", self.json)
-        # hello = {"hello": 1}
         if self.json:
+            print(self.json)
             #self.c.send(self.json)
             return 
 

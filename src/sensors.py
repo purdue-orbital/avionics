@@ -221,6 +221,7 @@ class Sensors:
         temp = self.json
         # Reassign here
         manager[0] = temp
+       # print(temp)
 
     def add(self, perform, freq, identity=None, token=None, access=None):
         """
