@@ -129,7 +129,7 @@ class Control:
         if arm:
             self.c.arm = True
         status = self.generate_status_json()
-        self.c.send(status)
+        #self.c.send(status)
         return self.c.arm
 
     def __enter__(self):
@@ -182,8 +182,9 @@ class Control:
         Sends most recent data collected over radio
         """
         if self.json:
-            print(self.json)
-            #self.c.send(self.json)
+            message = self.generate_status_json()
+            message["DATA"] = self.json
+            self.c.send(message)
             return 
 
     def lowpass_gyro(self):
@@ -238,7 +239,7 @@ class Control:
         else:
             logging.error(f"Stabilization failed: altitude {self.altitude}m not within bounds")
         
-        self.c.send(data)
+       # self.c.send(data)
         
     def ignition(self, mode):
         '''
@@ -287,7 +288,7 @@ class Control:
         else:
             logging.error("Ignition failed: altitude and/or spinrate not within tolerance")
 
-        self.c.send(data)
+        #self.c.send(data)
     def abort(self):
         self.abort = 1
         logging.info("aborted")
@@ -311,7 +312,7 @@ class Control:
             GPIO.output(QDM_PIN, GPIO.LOW)
             data = self.generate_status_json()
             data["QDM"] = True 
-            self.c.send(data)
+            #self.c.send(data)
             logging.info("QDM initiated")
         else:
             GPIO.output(QDM_PIN, GPIO.HIGH)
