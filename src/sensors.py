@@ -339,7 +339,7 @@ class Sensors:
         """
         if write:
             try:
-                self._temperature = (self.clock.temp,)
+                self._temperature = (self.imu.temp,)
             except Exception as e:
                 self.console.error(e)
                 self._temperature = (-999,)

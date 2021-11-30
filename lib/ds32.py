@@ -44,6 +44,7 @@ class DS3231(I2CDevice):
 
     @property
     def temp(self):
+
         msb = self.read(TEMP_REGISTER)
         lsb = self.read(TEMP_REGISTER + 1)
         self.temp = msb + (lsb >> 6) * 0.25
@@ -54,7 +55,7 @@ class DS3231(I2CDevice):
         self._temp = value
 
     def __del__(self):
-        GPIO.cleanup(self.pin)
+        GPIO.cleanup(CLOCK_PIN)
 
         
 if __name__ == "__main__":    

@@ -88,7 +88,7 @@ class ControlProcess(Process):
                 # Control loop to determine radio disconnection
                 ctrl.safetyTimer()
                 result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(minutes=45)  # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(minutes=120)  # Wait 5 min. to reestablish signal
                 while ((result == 0) & (datetime.now() < endT)):
                     ctrl.safetyTimer()
                     result = ctrl.connection_check()
