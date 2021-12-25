@@ -6,25 +6,26 @@ from radioapi.LSRadio import LSRadio as Radio
 class Comm:
     __instance = None
 
-    def __init__(self, DEBUG, hostname):
+    def __init__(self, DEBUG, port, baudrate):
         if Comm.__instance is not None:
             raise Exception("Constructor should not be called")
         else:
-            Comm.__instance = CommSingleton(DEBUG, hostname)
+            Comm.__instance = CommSingleton(DEBUG, port, baudrate)
 
-    def get_instance(self, DEBUG, hostname):
+    def get_instance(self, DEBUG, port, baudrate):
         if Comm.__instance is None:
             print("first")
-            Comm(DEBUG, hostname)
+            Comm(DEBUG, port, baudrate)
         else: print("not first")
         return Comm.__instance
 
 
 class CommSingleton:
-    def __init__(self, DEBUG = 0, hostname = '127.0.0.1'):
+    def __init__(self, DEBUG = 0, port='/dev/ttyuUSB0', baudrate=9600):
         try:
-            self.__radio = Radio(DEBUG, hostname)
+            self.__radio = Radio(DEBUG, port, baudrate)
             self.__arm = False
+            print(self.__radio)
         except Exception as e:
             print("EXCEPTION CAUGHT")
             print(e)

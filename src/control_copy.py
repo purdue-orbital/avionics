@@ -1,4 +1,3 @@
-
 import sys, os
 import time
 import json, math
@@ -20,7 +19,7 @@ IGNITION_PIN = 6
 IGNITION_DETECTION_PIN = 25
 ROCKET_LOG_PIN = 22
 STABILIZATION_PIN = 21
-POWER_ON_ALARM = 20 # minutes
+POWER_ON_ALARM = 5 # minutes
 # RIPD_PIN = 29
 
 
@@ -96,13 +95,10 @@ class Control:
         self.json = None
 
         # on start switch
-       # self.endT = datetime.now() + timedelta(minutes=POWER_ON_ALARM)  # 
-        self.endT = datetime.now() + timedelta(hours=3)  # 
+        self.endT = datetime.now() + timedelta(seconds=POWER_ON_ALARM)  # 
         self.console.info(f"POWER ON ALARM: {POWER_ON_ALARM} minutes")
         self.ground_abort = 0
         self.console.info("Initialization complete")
-    def setendT(self):
-        self.endT = datetime.now() + timedelta(minutes=POWER_ON_ALARM)  # 
 
     def groundAbort(self, abort=0):                                                                  
         if abort:       

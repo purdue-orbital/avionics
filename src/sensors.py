@@ -283,7 +283,10 @@ class Sensors:
         """
         if self.clock is not None:
             return (self.clock.time,)
-        else: return (time.time() - self.start_time,)
+        else: 
+            self.console.error("Clock Missing")
+            return (time.time() - self.start_time,)
+            
 
     def gps(self, write=False):
         """

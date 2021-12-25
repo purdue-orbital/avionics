@@ -72,23 +72,21 @@ class ControlProcess(Process):
 
         with Control("balloon") as ctrl:
             mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
-
             # Data collection needs to be running parallel to rest of program
             collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
             while not ctrl.arm():
-                ctrl.safetyTimer()
                 if ctrl.connection_check():
-                    command = json.loads(ctrl.check_queue())
+                    command = ctrl.check_queue()
                     ctrl.arm(command["ARMED"]) 
                 sleep(1)
-
+            ctrl.setendT()
             print("ARMED")
             while True:
                 # Control loop to determine radio disconnection
                 ctrl.safetyTimer()
                 result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(minutes=120)  # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(hours=3)  # Wait 5 min. to reestablish signal
                 while ((result == 0) & (datetime.now() < endT)):
                     ctrl.safetyTimer()
                     result = ctrl.connection_check()
@@ -144,7 +142,8 @@ if __name__ == "__main__":
         
         while True:
             sleep(2)
-            
+    except:
+        print("exception caught")
     finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
         data.shutdown()
