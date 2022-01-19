@@ -1,7 +1,10 @@
 #! /usr/bin/python3.6
 import json
 
-from radioapi.LSRadio import LSRadio as Radio 
+from orbitalcoms import (
+    create_serial_launch_station
+) 
+
 #from Radio import Radio
 class Comm:
     __instance = None
@@ -23,7 +26,7 @@ class Comm:
 class CommSingleton:
     def __init__(self, DEBUG = 0, port='/dev/ttyuUSB0', baudrate=9600):
         try:
-            self.__radio = Radio(DEBUG, port, baudrate)
+            self.__radio = create_serial_launch_station(port, baudrate)
             self.__arm = False
             print(self.__radio)
         except Exception as e:

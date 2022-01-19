@@ -1,7 +1,9 @@
 #! /usr/bin/python3.6
 import json
 
-from radioapi.LSRadio import LSRadio as Radio 
+from orbitalcoms import (
+    create_socket_launch_station
+) 
 #from Radio import Radio
 class Comm:
     __instance = None
@@ -23,7 +25,7 @@ class Comm:
 class CommSingleton:
     def __init__(self, DEBUG = 0, hostname = '127.0.0.1'):
         try:
-            self.__radio = Radio(DEBUG, hostname)
+            self.__radio = create_socket_launch_station(hostname, 5000)
         except Exception as e:
             print("EXCEPTION CAUGHT")
             print(e)
