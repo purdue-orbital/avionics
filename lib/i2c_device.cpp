@@ -2,15 +2,19 @@
 #include <i2c/smbus.h>
 #include "i2c_device.hpp"
 
-long int read(self, register_) {
+I2CDevice (int adress, std::string name) {
+  //BEHAVIOR
+}
+  
+long int read(int register_) {
   // code to be executed
 }
 
-long int read_block(self, register_, num) {
+long int read_block(int register_, int num) {
   // code to be executed
 }
 
-long int write(self, register_, data) {
+long int write(int register_, int data) {
   // code to be executed
 }
 
