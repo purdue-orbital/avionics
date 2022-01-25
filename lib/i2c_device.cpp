@@ -14,7 +14,7 @@ long int write(self, register_, data) {
   // code to be executed
 }
 
-/*    PYTHON CODE THAT NEEDS TO BE CONVERTED ABOVE: 
+/*    PYTHON CODE THAT NEEDS TO BE CONVERTED TO C++ ABOVE: 
       def __init__(self, address, name):
         self.address = address
         self.name = name
