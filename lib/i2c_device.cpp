@@ -2,8 +2,9 @@
 #include <i2c/smbus.h>
 #include "i2c_device.hpp"
 
-I2CDevice (int adress, std::string name) {
-  //BEHAVIOR
+I2CDevice (int address_, std::string name_) {
+  name = name_;
+  address = address_;
 }
   
 long int read(int register_) {
