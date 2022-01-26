@@ -2,20 +2,20 @@
 #include <i2c/smbus.h>
 #include "i2c_device.hpp"
 
-I2CDevice (int address_, std::string name_) {
+I2CDevice::I2CDevice(int address_, std::string name_) {
   name = name_;
   address = address_;
 }
   
-long int read(int register_) {
+long int I2CDevice::read(int register_) {
   // code to be executed
 }
 
-long int read_block(int register_, int num) {
+long int I2CDevice::read_block(int register_, int num) {
   // code to be executed
 }
 
-long int write(int register_, int data) {
+long int I2CDevice::write(int register_, int data) {
   // code to be executed
 }
 
