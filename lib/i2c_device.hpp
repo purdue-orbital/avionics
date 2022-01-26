@@ -1,5 +1,5 @@
 #pragma once
-#include <iostream>
+#include <string>
 
 class I2CDevice {
 public:
@@ -8,9 +8,9 @@ public:
 private:
   std::string name;
   int address;
-  
+
   long int read();
   std::vector<long int> read_block(int register_);
   void write(int register_, int data);
-  
+
 };
