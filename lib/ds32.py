@@ -1,6 +1,11 @@
 from i2c_device import I2CDevice
-import RPi.GPIO as GPIO
 from time import sleep
+
+try:
+    import RPi.GPIO as GPIO
+except RuntimeError:
+    import mockGPIO as GPIO
+
 
 ### ADDRESSES ###
 DS32_ADDRESS = 0x68

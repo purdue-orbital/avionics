@@ -1,19 +1,18 @@
-
-import sys, os
 import time
-import json, math
-import queue
+import math
 from collections import deque
 from threading import Thread, Event
 import logging
-from math import atan, pi
-import RPi.GPIO as GPIO
 from array import *
 from datetime import datetime, timedelta
 
-sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
-
 from CommunicationsDriver import Comm
+
+try:
+    import RPi.GPIO as GPIO
+except RuntimeError:
+    import mockGPIO as GPIO
+
 
 QDM_PIN = 13
 IGNITION_PIN = 6

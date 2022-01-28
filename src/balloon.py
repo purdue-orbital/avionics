@@ -3,8 +3,6 @@ from datetime import datetime, timedelta
 from sensors import Sensors
 from control import Control
 from time import sleep
-import RPi.GPIO as GPIO
-import json
 
 class SensorProcess(Process):
     def __init__(self, lproxy):

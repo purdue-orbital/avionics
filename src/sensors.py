@@ -1,19 +1,18 @@
 
-import sys, os
-import json
 import time
 from threading import Thread, Event
 import logging
-import RPi.GPIO as GPIO
 
 # Import modules from ../lib and add ../logs to PATH
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.abspath(os.path.join('..', 'logs')))
-sys.path.append(os.path.abspath(os.path.join('..', 'lib')))
 from mpu9 import MPU9250
 from ak89 import AK8963
 from ds32 import DS3231
 from neo7 import NEO7M
+
+try:
+    import RPi.GPIO as GPIO
+except RuntimeError:
+    import mockGPIO as GPIO
 
 ROCKET_IN = 27
 

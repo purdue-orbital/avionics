@@ -11,12 +11,32 @@ program_path='src/'
 program='balloon.py'
 ARGS=''
 
+script_path=`readlink -f "$0"`
+script_dir=`dirname $script_path`
+
+export ORBIT_ALLOW_MOCK_LIBS=1
+export ORBIT_REQUIRE_ROOT=0
+
+export PYTHONPATH="$script_dir/lib:$PYTHONPATH"
+export PYTHONPATH="$script_dir/pymocks:$PYTHONPATH"
+
+SUDO=""
+if [ $ORBIT_REQUIRE_ROOT -ne 0 ]; then
+	SUDO="sudo"
+fi
+echo $SUDO
+
 
 # Move to run.sh working directory
 cd $(dirname "$0")
 cd ${program_path}
+echo `pwd`
 
 # Clear traceback.log
+if [[ ! -f "$script_dir/$traceback_path" ]]; then
+		mkdir -p "$script_dir/logs"
+		touch "$script_dir/$traceback_path"
+fi
 truncate -s 0 ${local_path}${traceback_path}
 
 text="    ____                 __           
@@ -37,7 +57,7 @@ echo "PURDUE ORBITAL, ${INFO}PURDUE UNIVERSITY${NC}"
 echo "Avionics Sub Team"
 echo
 
-if [ "$EUID" -ne 0 ]
+if [[ "$EUID" -ne 0 && $ORBIT_REQUIRE_ROOT -ne 0 ]]
 then
     echo "${FAIL}[Error]${NC} The script ${FILE}run.sh${NC} requires root permissions to execute."
     echo "Please run as root or use ${FILE}sudo <command>${NC}"
@@ -46,7 +66,7 @@ fi
 
 echo "Checking Python version..."
 
-version=$( python3 -c 'import sys; print(sys.version_info[1])')
+version=$( $SUDO python3 -c 'import sys; print(sys.version_info[1])')
 if [[ ${version} -lt '6' ]]
 then
     echo
@@ -105,7 +125,7 @@ done
 echo "Attempting to run ${FILE}${program_path}${program}${NC}..."
 echo
 
-sudo python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
+$SUDO python3 ${program}${ARGS} 2> ${local_path}${traceback_path}
 if [[ $? == '1' ]]
 then
     traceback=$( tail -1 ${local_path}${traceback_path})
