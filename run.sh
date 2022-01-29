@@ -14,11 +14,11 @@ ARGS=''
 script_path=`readlink -f "$0"`
 script_dir=`dirname $script_path`
 
-export ORBIT_ALLOW_MOCK_LIBS=1
+export ORBIT_MOCK_GPIO=1
 export ORBIT_REQUIRE_ROOT=0
 
 export PYTHONPATH="$script_dir/lib:$PYTHONPATH"
-export PYTHONPATH="$script_dir/pymocks:$PYTHONPATH"
+export PYTHONPATH="$script_dir/devtools:$PYTHONPATH"
 
 SUDO=""
 if [ $ORBIT_REQUIRE_ROOT -ne 0 ]; then

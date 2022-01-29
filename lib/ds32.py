@@ -1,11 +1,12 @@
-from i2c_device import I2CDevice
 from time import sleep
 
-try:
-    import RPi.GPIO as GPIO
-except RuntimeError:
-    import mockGPIO as GPIO
+from devutils import envvartobool
+from i2c_device import I2CDevice
 
+if envvartobool("ORBIT_MOCK_GPIO"):
+    import mockGPIO as GPIO
+else:
+    import RPi.GPIO as GPIO
 
 ### ADDRESSES ###
 DS32_ADDRESS = 0x68

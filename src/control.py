@@ -1,17 +1,18 @@
-import time
-import math
-from collections import deque
-from threading import Thread, Event
 import logging
+import math
+import time
 from array import *
+from collections import deque
 from datetime import datetime, timedelta
+from threading import Event, Thread
 
 from CommunicationsDriver import Comm
+from devutils import envvartobool
 
-try:
-    import RPi.GPIO as GPIO
-except RuntimeError:
+if envvartobool("ORBIT_MOCK_GPIO"):
     import mockGPIO as GPIO
+else:
+    import RPi.GPIO as GPIO
 
 
 QDM_PIN = 13

@@ -1,18 +1,18 @@
 
-import time
-from threading import Thread, Event
 import logging
+import time
+from threading import Event, Thread
 
-# Import modules from ../lib and add ../logs to PATH
-from mpu9 import MPU9250
 from ak89 import AK8963
+from devutils import envvartobool
 from ds32 import DS3231
+from mpu9 import MPU9250
 from neo7 import NEO7M
 
-try:
-    import RPi.GPIO as GPIO
-except RuntimeError:
+if envvartobool("ORBIT_MOCK_GPIO"):
     import mockGPIO as GPIO
+else:
+    import RPi.GPIO as GPIO
 
 ROCKET_IN = 27
 
