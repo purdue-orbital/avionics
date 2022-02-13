@@ -8,10 +8,10 @@ class Comm:
     __instance = None
 
     def __init__(self, port, baudrate):
-        if self.__instance is not None:
+        if type(self).__instance is not None:
             raise Exception("Constructor should not be called")
         else:
-            self.__instance = CommSingleton(port, baudrate)
+            type(self).__instance = CommSingleton(port, baudrate)
 
     @classmethod
     def get_instance(cls, port, baudrate):

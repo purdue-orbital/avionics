@@ -1,8 +1,10 @@
-from multiprocessing import Process, Manager, Event
+import traceback
 from datetime import datetime, timedelta
-from sensors import Sensors
-from control import Control
+from multiprocessing import Event, Manager, Process
 from time import sleep
+
+from control import Control
+from sensors import Sensors
 
 
 class SensorProcess(Process):
@@ -162,6 +164,7 @@ if __name__ == "__main__":
             sleep(2)
     except:
         print("exception caught")
+        traceback.print_exc()
     finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
         data.shutdown()

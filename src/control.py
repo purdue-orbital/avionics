@@ -33,7 +33,7 @@ class Control:
         """
 
         def __init__(self, function, freq):
-            super().__init__(self, daemon=True)
+            Thread.__init__(self, daemon=True)
             # Could be used to prematurely stop thread using self.trigger.set()
             self.trigger = Event()
             self.fn = function
@@ -89,7 +89,7 @@ class Control:
         time.sleep(2)
         try:
             # Initialize radio communication
-            self.c = Comm.get_instance(self, port="/dev/ttyUSB0", baudrate=9600)
+            self.c = Comm.get_instance(port="/dev/ttyUSB0", baudrate=9600)
             print("Control Attempting Radio Connection")
             time.sleep(5)
         except Exception as e:

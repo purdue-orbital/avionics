@@ -1,14 +1,17 @@
-import sys, os
-import time
-import json, math
-import queue
-from collections import deque
-from threading import Thread, Event
+import json
 import logging
-from math import atan, pi
-import RPi.GPIO as GPIO
+import math
+import os
+import queue
+import sys
+import time
 from array import *
+from collections import deque
 from datetime import datetime, timedelta
+from math import atan, pi
+from threading import Event, Thread
+
+import RPi.GPIO as GPIO
 
 sys.path.append(os.path.abspath(os.path.join("..", "lib")))
 
