@@ -6,8 +6,9 @@ import logging
 import socket
 import time
 
+
 class Radio:
-    def __init__(self, DEBUG = 0, isGroundStation = False, hostname = '127.0.0.1'):
+    def __init__(self, DEBUG=0, isGroundStation=False, hostname="127.0.0.1"):
         """
         DEBUG 0 is for communication between two computers, for which hostname must also be defined. DEBUG 1 is for local communication uses localhost hostname.
         """
@@ -18,14 +19,18 @@ class Radio:
 
         self.DEBUG = DEBUG
         self.isGroundStation = isGroundStation
-        self.hostname = (hostname)
+        self.hostname = hostname
         self.queue = None
 
-        logging.basicConfig(level=(logging.INFO, logging.DEBUG)[self.DEBUG > 0], filename='mission.log', format='%(asctime)s %(levelname)s:%(message)s')
+        logging.basicConfig(
+            level=(logging.INFO, logging.DEBUG)[self.DEBUG > 0],
+            filename="mission.log",
+            format="%(asctime)s %(levelname)s:%(message)s",
+        )
 
         def receive():
             if not self.isGroundStation:
-                self.socket.listen(300) #Listen for 5 minutes
+                self.socket.listen(300)  # Listen for 5 minutes
                 (clientsocket, address) = self.socket.accept()
                 self.socket = clientsocket
 
@@ -36,41 +41,59 @@ class Radio:
 
                     jsonData = json.loads(message)
                     if self.isGroundStation:
-                        if self.launch != jsonData['LAUNCH'] or self.qdm != jsonData['QDM'] or self.abort != jsonData['ABORT'] or self.stab != jsonData['STAB']:
+                        if (
+                            self.launch != jsonData["LAUNCH"]
+                            or self.qdm != jsonData["QDM"]
+                            or self.abort != jsonData["ABORT"]
+                            or self.stab != jsonData["STAB"]
+                        ):
                             logging.warning("State mismatch, resending state")
                             # TODO Send State
                     else:
-                        #DEBUG
-                        if self.launch != jsonData['LAUNCH'] or self.qdm != jsonData['QDM'] or self.abort != jsonData['ABORT'] or self.stab != jsonData['STAB']:
-                            logging.info("State Updated:\nLaunch {0}\nQDM {1}\nAbort {2}\nStability {3}".format(jsonData['LAUNCH'], jsonData['QDM'], jsonData['ABORT'], jsonData['STAB']))
+                        # DEBUG
+                        if (
+                            self.launch != jsonData["LAUNCH"]
+                            or self.qdm != jsonData["QDM"]
+                            or self.abort != jsonData["ABORT"]
+                            or self.stab != jsonData["STAB"]
+                        ):
+                            logging.info(
+                                "State Updated:\nLaunch {0}\nQDM {1}\nAbort {2}\nStability {3}".format(
+                                    jsonData["LAUNCH"],
+                                    jsonData["QDM"],
+                                    jsonData["ABORT"],
+                                    jsonData["STAB"],
+                                )
+                            )
 
-                        self.launch = jsonData['LAUNCH']
-                        self.qdm = jsonData['QDM']
-                        self.abort = jsonData['ABORT']
-                        self.stab = jsonData['STAB']
+                        self.launch = jsonData["LAUNCH"]
+                        self.qdm = jsonData["QDM"]
+                        self.abort = jsonData["ABORT"]
+                        self.stab = jsonData["STAB"]
 
                     if self.queue is not None:
                         self.queue.append(message)
                     else:
                         print("Queue unbound")
-                        logging.error("Queue unbound")    
+                        logging.error("Queue unbound")
                 except Exception as e:
                     print("Invalid message received")
                     logging.error(e)
 
-        try: 
+        try:
             if not self.isGroundStation:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.socket.bind((('127.0.0.1', socket.gethostname()) [self.DEBUG != 1], 5000))
+                self.socket.bind(
+                    (("127.0.0.1", socket.gethostname())[self.DEBUG != 1], 5000)
+                )
             else:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.socket.connect(('127.0.0.1', 5000))
+                self.socket.connect(("127.0.0.1", 5000))
 
             thread.start_new_thread(receive, ())
         except Exception as e:
             print(e)
             print("test")
-
 
     def send(self, data):
         """
@@ -87,26 +110,28 @@ class Radio:
             # Oneway communication, Ground Station controls state.
             if self.isGroundStation:
                 try:
-                    self.launch = jsonData['LAUNCH']
-                    self.qdm = jsonData['QDM']
-                    self.abort = jsonData['ABORT']
-                    self.stab = jsonData['STAB']
+                    self.launch = jsonData["LAUNCH"]
+                    self.qdm = jsonData["QDM"]
+                    self.abort = jsonData["ABORT"]
+                    self.stab = jsonData["STAB"]
                 except Exception as e:
                     print("Ground Station did not append state attributes to data")
-                    logging.error("Ground Station did not append state attributes to data")
+                    logging.error(
+                        "Ground Station did not append state attributes to data"
+                    )
             else:
-                jsonData['LAUNCH'] = self.launch
-                jsonData['QDM'] = self.qdm
-                jsonData['ABORT'] = self.abort
-                jsonData['STAB'] = self.stab
+                jsonData["LAUNCH"] = self.launch
+                jsonData["QDM"] = self.qdm
+                jsonData["ABORT"] = self.abort
+                jsonData["STAB"] = self.stab
 
             logging.info("Sent: " + data)
-            self.socket.send(data.encode('ascii'))
-            print("Sent");
+            self.socket.send(data.encode("ascii"))
+            print("Sent")
             return 1
 
         except KeyboardInterrupt:
-            print ("interrupt received. shutting down.")
+            print("interrupt received. shutting down.")
             self.sock.close()
             exit()
 

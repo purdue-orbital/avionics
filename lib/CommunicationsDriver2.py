@@ -1,10 +1,9 @@
 #! /usr/bin/python3.6
 import json
 
-from orbitalcoms import (
-    create_socket_launch_station
-) 
-#from Radio import Radio
+from orbitalcoms import create_socket_launch_station
+
+# from Radio import Radio
 class Comm:
     __instance = None
 
@@ -18,18 +17,19 @@ class Comm:
         if Comm.__instance is None:
             print("first")
             Comm(DEBUG, hostname)
-        else: print("not first")
+        else:
+            print("not first")
         return Comm.__instance
 
 
 class CommSingleton:
-    def __init__(self, DEBUG = 0, hostname = '127.0.0.1'):
+    def __init__(self, DEBUG=0, hostname="127.0.0.1"):
         try:
             self.__radio = create_socket_launch_station(hostname, 5000)
         except Exception as e:
             print("EXCEPTION CAUGHT")
             print(e)
-            
+
     def send(self, command):
 
         try:
@@ -44,13 +44,12 @@ class CommSingleton:
 
     def getLaunchFlag(self):
         return self.__radio.getLaunchFlag()
-    
+
     def getQDMFlag(self):
         return self.__radio.getQDMFlag()
-    
+
     def getAbortFlag(self):
         return self.__radio.getAbortFlag()
-        
+
     def getStabFlag(self):
         return self.__radio.getStabFlag()
-

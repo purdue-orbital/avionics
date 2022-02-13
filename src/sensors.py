@@ -1,4 +1,3 @@
-
 import logging
 import time
 from threading import Event, Thread
@@ -15,6 +14,7 @@ else:
     import RPi.GPIO as GPIO
 
 ROCKET_IN = 27
+
 
 class Sensors:
     """
@@ -37,10 +37,13 @@ class Sensors:
             id   : string for json key
             token: column header for logging purposes
         """
+
         def __init__(self, perform, access, freq, identity, token):
             self.perform = perform
-            if access is None: self.access = perform
-            else: self.access = access
+            if access is None:
+                self.access = perform
+            else:
+                self.access = access
 
             self.freq = freq
             self.id = identity
@@ -51,9 +54,10 @@ class Sensors:
         """
         Method to reference head node and prepend a node
         """
+
         def __init__(self):
             self.head = None
-        
+
         def add(self, node):
             if node.id is not None:  # Initialize sensors
                 node.perform()
@@ -67,6 +71,7 @@ class Sensors:
         Arguments:
             obj : a Function object to be executed
         """
+
         def __init__(self, obj):
             Thread.__init__(self, daemon=True)
             # Could be used to prematurely stop thread using self.trigger.set()
@@ -76,84 +81,83 @@ class Sensors:
         def run(self):
             while not self.trigger.wait(1 / self.obj.freq):
                 self.obj.perform()
-            
+
     def __init__(self, name, imu_address=0x69, radio_port=True):
         # Set up debug logging
-        self.console = logging.getLogger('sensors')
+        self.console = logging.getLogger("sensors")
         _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
         logging.basicConfig(
-            level=logging.INFO, filename='../logs/status_sensors.log', filemode='a+', format=_format
+            level=logging.INFO,
+            filename="../logs/status_sensors.log",
+            filemode="a+",
+            format=_format,
         )
 
         self.console.info(f"\n\n### Starting {name} ###\n")
 
-        #on init, setup the rocket input pin and its event handler
+        # on init, setup the rocket input pin and its event handler
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(ROCKET_IN, GPIO.IN)
         GPIO.add_event_detect(ROCKET_IN, GPIO.FALLING, self.launch_detect)
-        
+
         self.name = name
         self.json = {
-                      "origin": "balloon",
-                      "GPS": {
-                        "long": 0,
-                        "lat": 0,
-                        "alt": 0
-                      },
-                      "gyro": {
-                        "x": 0,
-                        "y": 0,
-                        "z": 0
-                      },
-                      "temp": 0,
-                      "acc": {
-                        "x": 0,
-                        "y": 0,
-                        "z": 0
-                      }
+            "origin": "balloon",
+            "GPS": {"long": 0, "lat": 0, "alt": 0},
+            "gyro": {"x": 0, "y": 0, "z": 0},
+            "temp": 0,
+            "acc": {"x": 0, "y": 0, "z": 0},
         }
 
         # Open log file and write header
-        self.log = open('../logs/data.log', 'a+')
+        self.log = open("../logs/data.log", "a+")
 
         # Initialize sensor Modules
-        try: self.clock = DS3231("DS3231")
+        try:
+            self.clock = DS3231("DS3231")
         except:
             self.console.warning("DS3231 not initialized")
             self.clock = None
             self.start_time = time.time()
             self.console.info("Using system clock")
-        try: self.imu = MPU9250("MPU9250", mpu_address=imu_address)
-        except: self.console.warning("MPU9250 not initialized")
-        try: self.ak = AK8963("AK8963")
-        except: self.console.warning("AK8963 not initialized")
-        try: self.neo = NEO7M()
-        except: self.console.warning("NEO 7M GPS not initialized")
+        try:
+            self.imu = MPU9250("MPU9250", mpu_address=imu_address)
+        except:
+            self.console.warning("MPU9250 not initialized")
+        try:
+            self.ak = AK8963("AK8963")
+        except:
+            self.console.warning("AK8963 not initialized")
+        try:
+            self.neo = NEO7M()
+        except:
+            self.console.warning("NEO 7M GPS not initialized")
 
         self.list = self.SLL()
-        
 
         self.console.info("Initialization complete")
-    
+
     def __enter__(self):
         return self
-        
+
     def __exit__(self, exc_type, exc_value, traceback):
         """
         Specify cleanup procedure. Protects against most crashes
         """
-        if exc_type is not None: self.console.critical(f"{exc_type.__name__}: {exc_value}")
-        else: self.console.info("Sensors.py completed successfully.")
+        if exc_type is not None:
+            self.console.critical(f"{exc_type.__name__}: {exc_value}")
+        else:
+            self.console.info("Sensors.py completed successfully.")
         GPIO.cleanup()
         self.log.close()
-    
+
     def launch_detect(self, callback):
         """
         Callback function for the ROCKET_IN pin
         """
         logging.info(f"Launch detected at mission time {self.time()[0]}")
         GPIO.remove_event_detect(ROCKET_IN)
-        
+
     def write_header(self):
         """
         Writes header for specified sensors to log file
@@ -167,21 +171,25 @@ class Sensors:
             head = head.next
 
         self.log.write(",".join(string) + "\n")
-        
+
     def write(self):
         """
         Writes specified sensors to log file
         """
         head = self.list.head
         string = []
-        
+
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
                 data = head.access()
-                if head.id is not None:  # If data is being sent over radio, will have an ID
+                if (
+                    head.id is not None
+                ):  # If data is being sent over radio, will have an ID
                     sub = self.json[head.id]
                     if type(sub) is dict:
-                        self.json[head.id] = {list(sub.keys())[i]: data[i] for i in range(len(data))}
+                        self.json[head.id] = {
+                            list(sub.keys())[i]: data[i] for i in range(len(data))
+                        }
                     else:  # case of temperature, only has one variable
                         self.json[head.id] = data[0]
                 string.append(",".join([str(x) for x in data]))
@@ -195,13 +203,13 @@ class Sensors:
         """
         head = self.list.head
         string = []
-        
+
         while head is not None:
             if head.token is not None:  # Anything with a header
                 string.append(",".join([str(x) for x in head.access()]))
             head = head.next
 
-        #print(",".join(string))
+        # print(",".join(string))
 
     def pass_to(self, manager, *args):
         """
@@ -220,7 +228,8 @@ class Sensors:
         temp = self.json
         # Reassign here
         manager[0] = temp
-       # print(temp)
+
+    # print(temp)
 
     def add(self, perform, freq, identity=None, token=None, access=None):
         """
@@ -239,9 +248,10 @@ class Sensors:
         """
         head = self.list.head
         min = head.freq
-        
+
         while head is not None:
-            if (head.freq < min): min = head.freq
+            if head.freq < min:
+                min = head.freq
             head = head.next
 
         return min
@@ -253,9 +263,10 @@ class Sensors:
         """
         head = self.list.head
         max = head.freq
-        
+
         while head is not None:
-            if (head.freq > max): max = head.freq
+            if head.freq > max:
+                max = head.freq
             head = head.next
 
         return max
@@ -270,10 +281,12 @@ class Sensors:
 
         while head is not None:
             # print(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
-            self.console.info(f"Spawning thread {head.id} with frequency {head.freq} Hz...")
+            self.console.info(
+                f"Spawning thread {head.id} with frequency {head.freq} Hz..."
+            )
             t = self.IntThread(head)
             t.start()
-            
+
             head = head.next
 
     def time(self):
@@ -282,10 +295,9 @@ class Sensors:
         """
         if self.clock is not None:
             return (self.clock.time,)
-        else: 
+        else:
             self.console.error("Clock Missing")
             return (time.time() - self.start_time,)
-            
 
     def gps(self, write=False):
         """
@@ -297,8 +309,9 @@ class Sensors:
             except Exception as e:
                 self.console.error(e)
                 self._gps = (-999, -999, -999)
-        else: return self._gps
-        
+        else:
+            return self._gps
+
     def accel(self, write=False):
         """
         Reads acceleration from the MPU9250 chip
@@ -309,7 +322,8 @@ class Sensors:
             except Exception as e:
                 self.console.error(e)
                 self._accel = (-999, -999, -999)
-        else: return self._accel
+        else:
+            return self._accel
 
     def gyro(self, write=False):
         """
@@ -321,8 +335,9 @@ class Sensors:
             except Exception as e:
                 self.console.error(e)
                 self._gyro = (-999, -999, -999)
-        else: return self._gyro
-                
+        else:
+            return self._gyro
+
     def magnet(self, write=False):
         """
         Read magnetometer data from the MPU9250 chip
@@ -333,8 +348,9 @@ class Sensors:
             except Exception as e:
                 self.console.error(e)
                 self._magnet = (-999, -999, -999)
-        else: return self._magnet
-        
+        else:
+            return self._magnet
+
     def temperature(self, write=False):
         """
         Reads temperature data from the MS5611 chip
@@ -345,7 +361,8 @@ class Sensors:
             except Exception as e:
                 self.console.error(e)
                 self._temperature = (-999,)
-        else: return self._temperature
+        else:
+            return self._temperature
 
 
 if __name__ == "__main__":
@@ -353,32 +370,48 @@ if __name__ == "__main__":
 
         # Lambda used to pass generic multi-arg functions to sensors.add
         # These will later be executed in unique threads
-        sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
-            token="temp (C)", access=lambda: sensors.temperature()
+        sensors.add(
+            lambda: sensors.temperature(write=True),
+            1,
+            identity="temp",
+            token="temp (C)",
+            access=lambda: sensors.temperature(),
         )
 
-        sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
-            token="lat, long, alt (m)", access=lambda: sensors.gps()
+        sensors.add(
+            lambda: sensors.gps(write=True),
+            0.5,
+            identity="GPS",
+            token="lat, long, alt (m)",
+            access=lambda: sensors.gps(),
         )
 
-        sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
-            token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+        sensors.add(
+            lambda: sensors.accel(write=True),
+            1,
+            identity="acc",
+            token="ax (g),ay (g),az (g)",
+            access=lambda: sensors.accel(),
         )
 
-        sensors.add(lambda: sensors.gyro(write=True), 2, identity="gyro",
-            token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+        sensors.add(
+            lambda: sensors.gyro(write=True),
+            2,
+            identity="gyro",
+            token="gx (dps),gy (dps),gz (dps)",
+            access=lambda: sensors.gyro(),
         )
 
         # sensors.add(lambda:sensors.pass_to(temp), 1)
         sensors.add(lambda: sensors.print(), 1)
         sensors.add(lambda: sensors.send(), 1)
-        
+
         ### DON'T CHANGE ###
         sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
         sensors.write_header()
         sensors.add(lambda: sensors.write(), sensors.greatest)
         sensors.stitch()
         ### DON'T CHANGE ###
-        
+
         while True:
             time.sleep(1)

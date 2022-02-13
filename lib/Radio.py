@@ -1,4 +1,5 @@
 import zmq
+
 # import pmt
 import _thread as thread
 import os
@@ -19,16 +20,17 @@ this version does not include the library and as such will not work with GNU Rad
 This can be resolved in the future by uncommenting the lines referencing pmt and commenting out the extraneous send commands.
 """
 
+
 class Radio:
-    """ Radio API for transmission and reception
+    """Radio API for transmission and reception
 
     Allows sending and receiving of data, as well as state tracking through memory and persistent storage.
 
     TODO: Rework into singleton to maintain class timing across threads for backup QDM system. https://stackoverflow.com/questions/21974029/python-sharing-class-instance-among-threads
     """
 
-    def __init__(self, DEBUG=0, isGroundStation = False, hostname = '127.0.0.1'):
-        """ 
+    def __init__(self, DEBUG=0, isGroundStation=False, hostname="127.0.0.1"):
+        """
         Initializes states based on existance of persistent file. DEBUG modes are 0 for flight, 1 for radio testing, and 2 for ethernet testing, 3 for internal testing.
         During the first instantiation of this class in launch the caller must guarentee state.json does not exist or a state conflict may occur
         when in DEBUG 0. Additionally, when in DEBUG 0 or 1, confirm GNU Radio python file is in working directory.
@@ -36,9 +38,9 @@ class Radio:
         try:
             if DEBUG < 0 or DEBUG > 3:
                 raise TypeError("DEBUG must be 0, 1, 2, or 3")
-            if DEBUG != 2 and hostname != '127.0.0.1':
+            if DEBUG != 2 and hostname != "127.0.0.1":
                 raise TypeError("hostname should not be changed unless in DEBUG mode 2")
-            
+
             self.launch = False
             self.qdm = False
             self.abort = False
@@ -46,29 +48,34 @@ class Radio:
 
             self.DEBUG = DEBUG
             self.isGroundStation = isGroundStation
-            self.hostname = (hostname)
+            self.hostname = hostname
 
             if self.DEBUG == 0:
                 if os.path.exists("state.json"):
-                    with open('state.json', 'r', encoding='utf-8') as stateFile:
+                    with open("state.json", "r", encoding="utf-8") as stateFile:
                         state = json.loads(stateFile.read())
 
-                        self.launch = state['LAUNCH']
-                        self.qdm = state['QDM']
-                        self.abort = state['ABORT']
-                        self.stab = state['STAB']
+                        self.launch = state["LAUNCH"]
+                        self.qdm = state["QDM"]
+                        self.abort = state["ABORT"]
+                        self.stab = state["STAB"]
 
                         stateFile.close()
-                
-                else:
-                    self.saveState()    
 
-            logging.basicConfig(level=(logging.INFO, logging.DEBUG)[self.DEBUG > 0], filename='mission.log', format='%(asctime)s %(levelname)s:%(message)s')
+                else:
+                    self.saveState()
+
+            logging.basicConfig(
+                level=(logging.INFO, logging.DEBUG)[self.DEBUG > 0],
+                filename="mission.log",
+                format="%(asctime)s %(levelname)s:%(message)s",
+            )
 
             self.queue = None
 
             # Set reception up
             if DEBUG == 1:
+
                 def receive(recv_socket):
                     while True:
                         try:
@@ -79,7 +86,12 @@ class Radio:
 
                             jsonData = json.loads(message)
 
-                            if self.launch != jsonData['LAUNCH'] or self.qdm != jsonData['QDM'] or self.abort != jsonData['ABORT'] or self.stab != jsonData['STAB']:
+                            if (
+                                self.launch != jsonData["LAUNCH"]
+                                or self.qdm != jsonData["QDM"]
+                                or self.abort != jsonData["ABORT"]
+                                or self.stab != jsonData["STAB"]
+                            ):
                                 logging.warning("State mismatch, resending state")
                                 self.sendState()
 
@@ -87,12 +99,12 @@ class Radio:
                                 self.queue.append(message)
                             else:
                                 print("Queue unbound")
-                                logging.error("Queue unbound")    
+                                logging.error("Queue unbound")
                         except Exception as e:
                             print("Invalid message received")
                             logging.error(e)
 
-                context = zmq.Context()  
+                context = zmq.Context()
 
                 recv_sock = context.socket(zmq.PULL)
                 recv_sock.bind("tcp://127.0.0.1:5001")
@@ -102,9 +114,10 @@ class Radio:
                 self.sock = context.socket(zmq.PUSH)
 
             elif self.DEBUG == 2 or self.DEBUG == 3:
+
                 def receive():
                     if self.isGroundStation:
-                        self.socket.listen(300) #Listen for 5 minutes
+                        self.socket.listen(300)  # Listen for 5 minutes
                         (clientsocket, address) = self.socket.accept()
                         self.socket = clientsocket
 
@@ -115,7 +128,12 @@ class Radio:
 
                             jsonData = json.loads(message)
 
-                            if self.launch != jsonData['LAUNCH'] or self.qdm != jsonData['QDM'] or self.abort != jsonData['ABORT'] or self.stab != jsonData['STAB']:
+                            if (
+                                self.launch != jsonData["LAUNCH"]
+                                or self.qdm != jsonData["QDM"]
+                                or self.abort != jsonData["ABORT"]
+                                or self.stab != jsonData["STAB"]
+                            ):
                                 logging.warning("State mismatch, resending state")
                                 self.sendState()
 
@@ -123,14 +141,16 @@ class Radio:
                                 self.queue.append(message)
                             else:
                                 print("Queue unbound")
-                                logging.error("Queue unbound")    
+                                logging.error("Queue unbound")
                         except Exception as e:
                             print("Invalid message received")
                             logging.error(e)
 
                 if self.isGroundStation:
                     self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    self.socket.bind((('127.0.0.1', socket.gethostname()) [self.DEBUG == 2], 5000))
+                    self.socket.bind(
+                        (("127.0.0.1", socket.gethostname())[self.DEBUG == 2], 5000)
+                    )
                 else:
                     self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     self.socket.connect((self.hostname, 5000))
@@ -140,7 +160,6 @@ class Radio:
         except Exception as e:
             print(e)
             logging.error(e)
-
 
     def send(self, data):
         """
@@ -157,29 +176,31 @@ class Radio:
             # Oneway communication, Ground Station controls state.
             if self.isGroundStation:
                 try:
-                    self.launch = jsonData['LAUNCH']
-                    self.qdm = jsonData['QDM']
-                    self.abort = jsonData['ABORT']
-                    self.stab = jsonData['STAB']
+                    self.launch = jsonData["LAUNCH"]
+                    self.qdm = jsonData["QDM"]
+                    self.abort = jsonData["ABORT"]
+                    self.stab = jsonData["STAB"]
                 except Exception as e:
                     print("Ground Station did not append state attributes to data")
-                    logging.error("Ground Station did not append state attributes to data")
+                    logging.error(
+                        "Ground Station did not append state attributes to data"
+                    )
 
                 self.saveState()
             else:
-                jsonData['LAUNCH'] = self.launch
-                jsonData['QDM'] = self.qdm
-                jsonData['ABORT'] = self.abort
-                jsonData['STAB'] = self.stab
+                jsonData["LAUNCH"] = self.launch
+                jsonData["QDM"] = self.qdm
+                jsonData["ABORT"] = self.abort
+                jsonData["STAB"] = self.stab
 
             logging.info("Sent: " + data)
             print(type(data))
-            self.socket.send(data.encode('ascii'))
-            print("Sent");
+            self.socket.send(data.encode("ascii"))
+            print("Sent")
             return 1
 
         except KeyboardInterrupt:
-            print ("interrupt received. shutting down.")
+            print("interrupt received. shutting down.")
             self.sock.close()
             exit()
 
@@ -188,13 +209,12 @@ class Radio:
             logging.error(e)
             return 0
 
-
     def sendState(self):
         state = {}
-        state['LAUNCH'] = self.launch
-        state['QDM'] = self.qdm
-        state['ABORT'] = self.abort
-        state['STAB'] = self.stab
+        state["LAUNCH"] = self.launch
+        state["QDM"] = self.qdm
+        state["ABORT"] = self.abort
+        state["STAB"] = self.stab
 
         try:
             logging.info(state)
@@ -205,7 +225,7 @@ class Radio:
             return 1
 
         except KeyboardInterrupt:
-            print ("interrupt received. shutting down.")
+            print("interrupt received. shutting down.")
             self.sock.close()
             exit()
         except Exception as e:
@@ -225,7 +245,6 @@ class Radio:
     def getStabFlag(self):
         return self.stab
 
-
     def bindQueue(self, queue):
         """
         Supply a queue reference for data placement. See recvTest.py for example usage.
@@ -234,12 +253,12 @@ class Radio:
 
     def saveState(self):
         state = {}
-        state['LAUNCH'] = self.launch
-        state['QDM'] = self.qdm
-        state['ABORT'] = self.abort
-        state['STAB'] = self.stab
+        state["LAUNCH"] = self.launch
+        state["QDM"] = self.qdm
+        state["ABORT"] = self.abort
+        state["STAB"] = self.stab
 
-        with open('state.json', 'w+', encoding='utf-8') as f:
+        with open("state.json", "w+", encoding="utf-8") as f:
             json.dump(state, f, ensure_ascii=False, indent=4)
 
     def close(self):
