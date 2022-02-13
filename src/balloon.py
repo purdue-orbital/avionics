@@ -91,6 +91,7 @@ class ControlProcess(Process):
             collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
             while not ctrl.arm():
+                print(ctrl.commands)  # TODO: Remove debug stmt
                 if ctrl.connection_check():
                     command = ctrl.check_queue()
                     ctrl.arm(command["ARMED"])
@@ -101,10 +102,9 @@ class ControlProcess(Process):
                 # Control loop to determine radio disconnection
                 ctrl.safetyTimer()
                 result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(
-                    hours=3
-                )  # Wait 5 min. to reestablish signal
-                while (result == 0) & (datetime.now() < endT):
+                # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(hours=3)
+                while result == 0 and datetime.now() < endT:
                     ctrl.safetyTimer()
                     result = ctrl.connection_check()
                     sleep(0.5)  # Don't overload CPU

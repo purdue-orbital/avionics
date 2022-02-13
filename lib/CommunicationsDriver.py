@@ -7,23 +7,24 @@ from orbitalcoms import create_serial_launch_station
 class Comm:
     __instance = None
 
-    def __init__(self, DEBUG, port, baudrate):
-        if Comm.__instance is not None:
+    def __init__(self, port, baudrate):
+        if self.__instance is not None:
             raise Exception("Constructor should not be called")
         else:
-            Comm.__instance = CommSingleton(DEBUG, port, baudrate)
+            self.__instance = CommSingleton(port, baudrate)
 
-    def get_instance(self, DEBUG, port, baudrate):
-        if Comm.__instance is None:
+    @classmethod
+    def get_instance(cls, port, baudrate):
+        if cls.__instance is None:
             print("first")
-            Comm(DEBUG, port, baudrate)
+            cls(port, baudrate)
         else:
             print("not first")
-        return Comm.__instance
+        return cls.__instance
 
 
 class CommSingleton:
-    def __init__(self, DEBUG=0, port="/dev/ttyuUSB0", baudrate=9600):
+    def __init__(self, port="/dev/ttyuUSB0", baudrate=9600):
         try:
             self.__radio = create_serial_launch_station(port, baudrate)
             self.__arm = False
@@ -33,13 +34,9 @@ class CommSingleton:
             print(e)
 
     def send(self, command):
-
-        try:
-            if not len(command) == 0:
-                print(command)
-                self.__radio.send(json.dumps(command))
-        except Exception as e:
-            print(e)
+        print(f"Sending: {command}")
+        if not self.__radio.send(json.dumps(command)):
+            print("Message failed to send")
 
     def bind(self, queue):
         self.__radio.bindQueue(queue)
