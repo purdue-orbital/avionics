@@ -5,6 +5,7 @@ from time import sleep
 
 from control import Control
 from sensors import Sensors
+from interval import IntervalThread
 
 
 class SensorProcess(Process):
@@ -90,25 +91,28 @@ class ControlProcess(Process):
         with Control("balloon") as ctrl:
             mode = 2  # mode 1 = testmode / mode 2 = pre-launch mode
             # Data collection needs to be running parallel to rest of program
-            collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
+            collect = IntervalThread(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
-            while not ctrl.arm():
+
+            # FIXME: This should recieve the first msg with ARMED==TRUE
+            # otherwise we risk race conditions
+            while not ctrl.is_armed():
                 print(ctrl.commands)  # TODO: Remove debug stmt
-                if ctrl.connection_check():
-                    command = ctrl.check_queue()
-                    ctrl.arm(command["ARMED"])
+                while ctrl.is_queued_msgs():
+                    ctrl.get_next_msg()
                 sleep(1)
-            ctrl.setendT()
+            ctrl.set_end_time()
+
             print("ARMED")
             while True:
                 # Control loop to determine radio disconnection
                 ctrl.safetyTimer()
-                result = ctrl.connection_check()
+                result = ctrl.is_queued_msgs()
                 # Wait 5 min. to reestablish signal
                 endT = datetime.now() + timedelta(hours=3)
                 while result == 0 and datetime.now() < endT:
                     ctrl.safetyTimer()
-                    result = ctrl.connection_check()
+                    result = ctrl.is_queued_msgs()
                     sleep(0.5)  # Don't overload CPU
 
                 # These don't need to be parallel to the radio connection, since we won't
@@ -117,7 +121,7 @@ class ControlProcess(Process):
                     ctrl.qdm_check(1)
                 else:
                     # Receive commands and iterate through them
-                    commands = ctrl.check_queue()
+                    commands = ctrl.get_next_msg()
                     if ctrl.getLaunchFlag():
                         print("Launch Detected")
                         ctrl.ignition(mode)
@@ -142,7 +146,7 @@ class ControlProcess(Process):
         print("ControlProcess killed.")
 
 
-if __name__ == "__main__":
+def main() -> None:
     try:
         # Create Manager() for dict (which is stored in a list)
         manager = Manager()
@@ -159,10 +163,7 @@ if __name__ == "__main__":
         # Wait in main so that this can be escaped properly with ctrl+c
         data.join()
         comm.join()
-
-        while True:
-            sleep(2)
-    except:
+    except Exception:
         print("exception caught")
         traceback.print_exc()
     finally:  # Catch interrupts (terminates with traceback)
@@ -171,3 +172,7 @@ if __name__ == "__main__":
         comm.shutdown()
         sleep(1)  # Wait until processes close
         print("Processes terminated.\n")
+
+
+if __name__ == "__main__":
+    main()

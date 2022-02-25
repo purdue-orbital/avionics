@@ -1,62 +1,51 @@
-#! /usr/bin/python3.6
-import json
+from __future__ import annotations
 
-from orbitalcoms import create_serial_launch_station
+import json
+from typing import Any, Dict, List
+import traceback
+
+from orbitalcoms import ComsMessage, create_serial_launch_station
 
 # from Radio import Radio
 class Comm:
-    __instance = None
+    __instance: _CommSingleton | None = None
 
-    def __init__(self, port, baudrate):
-        if type(self).__instance is not None:
-            raise Exception("Constructor should not be called")
-        else:
-            type(self).__instance = CommSingleton(port, baudrate)
+    def __init__(self) -> None:
+        raise RuntimeError("Constructor should not be called")
 
     @classmethod
-    def get_instance(cls, port, baudrate):
+    def get_instance(cls, port: str, baudrate: int) -> _CommSingleton:
         if cls.__instance is None:
-            print("first")
-            cls(port, baudrate)
-        else:
-            print("not first")
+            cls.__instance = _CommSingleton(port, baudrate)
         return cls.__instance
 
 
-class CommSingleton:
-    def __init__(self, port="/dev/ttyuUSB0", baudrate=9600):
+class _CommSingleton:
+    def __init__(self, port: str = "/dev/ttyuUSB0", baudrate: int = 9600) -> None:
         try:
             self.__radio = create_serial_launch_station(port, baudrate)
-            self.__arm = False
-            print(self.__radio)
-        except Exception as e:
-            print("EXCEPTION CAUGHT")
-            print(e)
+        except Exception:
+            traceback.print_exc()
 
-    def send(self, command):
+    def send(self, command: Dict[Any, Any]) -> None:
         print(f"Sending: {command}")
         if not self.__radio.send(json.dumps(command)):
             print("Message failed to send")
 
-    def bind(self, queue):
-        self.__radio.bindQueue(queue)
+    def bind(self, queue: List[ComsMessage]) -> None:
+        self.__radio.bind_queue(queue)
 
-    def getLaunchFlag(self):
+    def getLaunchFlag(self) -> bool:
         return self.__radio.getLaunchFlag()
 
-    def getQDMFlag(self):
+    def getQDMFlag(self) -> bool:
         return self.__radio.getQDMFlag()
 
-    def getAbortFlag(self):
+    def getAbortFlag(self) -> bool:
         return self.__radio.getAbortFlag()
 
-    def getStabFlag(self):
+    def getStabFlag(self) -> bool:
         return self.__radio.getStabFlag()
 
-    @property
-    def arm(self):
-        return self.__arm
-
-    @arm.setter
-    def arm(self, arm):
-        self.__arm = arm
+    def getArmedFlag(self) -> bool:
+        self.__radio.getArmedFlag()

@@ -1,10 +1,12 @@
 import logging
 import math
 import time
-from array import *
+
 from collections import deque
 from datetime import datetime, timedelta
-from threading import Event, Thread
+from typing import Deque, Dict, List, Tuple
+
+from orbitalcoms import ComsMessage
 
 from CommunicationsDriver import Comm
 from devutils import envvartobool
@@ -24,53 +26,22 @@ POWER_ON_ALARM = 20  # minutes
 # RIPD_PIN = 29
 
 
+# Set up info logging
+logging.basicConfig(
+    level=logging.INFO,
+    filename="../logs/status_control.log",
+    filemode="a+",
+    format="%(asctime)s %(processName)s::%(threadName)s %(levelname)s > %(message)s",
+)
+logger = logging.getLogger("control")
+
+
 class Control:
-    class Collection(Thread):
-        """
-        Spawn a Thread to repeat at a given interval
-        Arguments:
-            obj : a Function object to be executed
-        """
-
-        def __init__(self, function, freq):
-            Thread.__init__(self, daemon=True)
-            # Could be used to prematurely stop thread using self.trigger.set()
-            self.trigger = Event()
-            self.fn = function
-            self.freq = freq
-
-        def run(self):
-            while not self.trigger.wait(1 / self.freq):
-                self.fn()
-
-    def generate_status_json(self):
-        state = {
-            "LAUNCH": self.c.getLaunchFlag(),
-            "QDM": self.c.getQDMFlag(),
-            "ABORT": self.c.getAbortFlag(),
-            "STAB": self.c.getStabFlag(),
-            "ARMED": self.c.arm,
-        }
-        return state
-
     def __init__(self, name):
-        # Set up info logging
-        self.console = logging.getLogger("control")
-        _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
-        logging.basicConfig(
-            level=logging.INFO,
-            filename="../logs/status_control.log",
-            filemode="a+",
-            format=_format,
-        )
-
-        self.console.info(f"\n\n### Starting {name} ###\n")
+        logger.info(f"\n\n### Starting {name} ###\n")
 
         # Create a data queue
-        self.gx_queue = deque([])
-        self.gy_queue = deque([])
-        self.gz_queue = deque([])
-        self.time_queue = deque([])
+        self.gyro_queue: Deque[Tuple[float, float, float, float]] = deque()
 
         # GPIO SETUP
         GPIO.setmode(GPIO.BCM)
@@ -89,24 +60,33 @@ class Control:
         time.sleep(2)
         try:
             # Initialize radio communication
-            self.c = Comm.get_instance(port="/dev/ttyUSB0", baudrate=9600)
+            self.comm_driver = Comm.get_instance(port="/dev/ttyUSB0", baudrate=9600)
             print("Control Attempting Radio Connection")
             time.sleep(5)
         except Exception as e:
             print(e)
         # self.commands = queue.Queue(maxsize=10)
-        self.commands = []
-        self.c.bind(self.commands)
-        self.json = None
+        self.commands: List[ComsMessage] = []
+        self.comm_driver.bind(self.commands)
+        self.data = None
 
         # on start switch
         # self.endT = datetime.now() + timedelta(minutes=POWER_ON_ALARM)  #
         self.endT = datetime.now() + timedelta(hours=3)  #
-        self.console.info(f"POWER ON ALARM: {POWER_ON_ALARM} minutes")
+        logger.info(f"POWER ON ALARM: {POWER_ON_ALARM} minutes")
         self.ground_abort = 0
-        self.console.info("Initialization complete")
+        logger.info("Initialization complete")
 
-    def setendT(self):
+    def generate_status_json(self) -> Dict[str, bool]:
+        return {
+            "LAUNCH": self.comm_driver.getLaunchFlag(),
+            "QDM": self.comm_driver.getQDMFlag(),
+            "ABORT": self.comm_driver.getAbortFlag(),
+            "STAB": self.comm_driver.getStabFlag(),
+            "ARMED": self.comm_driver.getArmedFlag(),
+        }
+
+    def set_end_time(self):
         self.endT = datetime.now() + timedelta(minutes=POWER_ON_ALARM)  #
 
     def groundAbort(self, abort=0):
@@ -119,28 +99,23 @@ class Control:
             print("safety_timer")
             self.qdm_check(1)
 
-    def check_queue(self):
-        command = self.commands.pop(0)
-        return command
+    def get_next_msg(self) -> ComsMessage:
+        return self.commands.pop(0)
 
-    def getLaunchFlag(self):
-        return self.c.getLaunchFlag()
+    def getLaunchFlag(self) -> bool:
+        return self.comm_driver.getLaunchFlag()
 
-    def getQDMFlag(self):
-        return self.c.getQDMFlag()
+    def getQDMFlag(self) -> bool:
+        return self.comm_driver.getQDMFlag()
 
-    def getAbortFlag(self):
-        return self.c.getAbortFlag()
+    def getAbortFlag(self) -> bool:
+        return self.comm_driver.getAbortFlag()
 
-    def getStabFlag(self):
-        return self.c.getStabFlag()
+    def getStabFlag(self) -> bool:
+        return self.comm_driver.getStabFlag()
 
-    def arm(self, arm=False):
-        if arm:
-            self.c.arm = True
-        status = self.generate_status_json()
-        # self.c.send(status)
-        return self.c.arm
+    def is_armed(self):
+        return self.comm_driver.getArmedFlag()
 
     def __enter__(self):
         return self
@@ -151,9 +126,9 @@ class Control:
         """
         print("EXITED CONTROL")
         if exc_type is not None:
-            self.console.critical(f"{exc_type.__name__}: {exc_value}")
+            logger.critical(f"{exc_type.__name__}: {exc_value}")
         else:
-            self.console.info("Control.py completed successfully.")
+            logger.info("Control.py completed successfully.")
         GPIO.cleanup()
 
     def read_data(self, proxy):
@@ -163,71 +138,59 @@ class Control:
         Arguments:
             proxy : list containing dict and time
         """
-        self.json = proxy[0]
+        self.data = proxy[0]
 
-        if self.json:
+        if self.data:
             self.send()  # send data over radio
 
-            self.altitude = self.json["GPS"]["alt"]
-            gx = self.json["gyro"]["x"]
-            gy = self.json["gyro"]["y"]
-            gz = self.json["gyro"]["z"]
+            self.altitude = self.data["GPS"]["alt"]
+            gx = self.data["gyro"]["x"]
+            gy = self.data["gyro"]["y"]
+            gz = self.data["gyro"]["z"]
             # time = balloon['time']
 
-            if len(list(self.gx_queue)) > 100:
-                self.gx_queue.popleft()
-                self.gy_queue.popleft()
-                self.gz_queue.popleft()
-                self.time_queue.popleft()
+            if len(self.gyro_queue) > 100:
+                # FIXME: Pops at over 100 but only last 10 points ever used
+                self.gyro_queue.popleft()
 
-            self.gx_queue.append(gx)
-            self.gy_queue.append(gy)
-            self.gz_queue.append(gz)
-            self.time_queue.append(time)
-
-            # print(f"{time} : {gx},{gy},{gz}")
-
+            self.gyro_queue.append((time.time(), gx, gy, gz))
             logging.debug("Data received")
 
-    def send(self):
+    def send(self) -> None:
         """
         Sends most recent data collected over radio
         """
-        if self.json:
+        if self.data:
             message = self.generate_status_json()
-            message["DATA"] = self.json
-            self.c.send(message)
-            return
+            message["DATA"] = self.data
+            self.comm_driver.send(message)
 
-    def lowpass_gyro(self):
+    def lowpass_gyro(self) -> float:
         """
         TODO
         Implements a low-pass filter to accurately determine and return spinrate
         magnitude
         """
-        length = len(list(self.gx_queue))
-        gx, gy, gz = 0
+        gx, gy, gz = 0, 0, 0
 
-        if length > 10:
-            for i in range(10, 0, -1):
-                gx += self.gx_queue[length - i] / 10
-                gy += self.gy_queue[length - i] / 10
-                gz += self.gz_queue[length - i] / 10
-        else:
-            gx = self.gx_queue[length - 1]
-            gy = self.gy_queue[length - 1]
-            gz = self.gz_queue[length - 1]
+        if len(self.gyro_queue) > 10:
+            for i in range(1, 11):
+                _, gx_, gy_, gz_ = self.gyro_queue[-i]
+                gx += gx_ / 10
+                gy += gy_ / 10
+                gz += gz_ / 10
+        elif len(self.gyro_queue):
+            gx, gy, gz = self.gyro_queue[-1]
 
-        return math.sqrt(gx ** 2 + gy ** 2 + gz ** 2)
+        return math.sqrt(gx**2 + gy**2 + gz**2)
 
-    def launch_condition(self):
+    def launch_condition(self) -> None:
         """
         Returns True if both spinrate and altitude are within spec.
+        FIXME: docstring has incorrect info
 
         return result: launch condition true or false
         """
-
-        altitude = (self.altitude <= 25500) & (self.altitude >= 24500)
         spinrate = self.lowpass_gyro()
         logging.info(f"Altitude: {self.altitude}m - Spinrate: {spinrate}dps")
 
@@ -240,19 +203,15 @@ class Control:
         # Bounds hard-coded for "ease" of manipulation (not worth the effort)
         # condition = (self.altitude<=25500) & (self.altitude >= 24500)
         condition = True
-        data = self.generate_status_json()
-
         if condition:
             GPIO.output(STABILIZATION_PIN, GPIO.HIGH)
             print("stabilization")
-            data["STAB"] = True
             logging.info("Stabilization initiated")
         else:
+            # FIXME: Unreachable code block
             logging.error(
                 f"Stabilization failed: altitude {self.altitude}m not within bounds"
             )
-
-    # self.c.send(data)
 
     def ignition(self, mode):
         """
@@ -303,17 +262,12 @@ class Control:
                 "Ignition failed: altitude and/or spinrate not within tolerance"
             )
 
-        # self.c.send(data)
-
-    def abort(self):
-        self.abort = 1
+    def abort(self) -> None:
         logging.info("aborted")
         print("Aborting")
-        data = self.generate_status_json()
-        data["QDM"] = 3
         GPIO.cleanup()
 
-    def qdm_check(self, QDM):
+    def qdm_check(self, QDM: bool) -> None:
         """
         This checks if we need to QDM.
         Parameter: QDM
@@ -328,13 +282,12 @@ class Control:
             GPIO.output(QDM_PIN, GPIO.LOW)
             data = self.generate_status_json()
             data["QDM"] = True
-            self.c.send(data)
             logging.info("QDM initiated")
         else:
             GPIO.output(QDM_PIN, GPIO.HIGH)
 
-    def connection_check(self):
-        return not self.commands == []
+    def is_queued_msgs(self) -> bool:
+        return bool(self.commands)
 
 
 if __name__ == "__main__":
@@ -351,12 +304,12 @@ if __name__ == "__main__":
         # collect.start()
         while True:
             # Control loop to determine radio disconnection
-            result = ctrl.connection_check()
+            result = ctrl.is_queued_msgs()
             endT = datetime.now() + timedelta(
                 seconds=5
             )  # Wait 5 seconds to reestablish signal TODO if copying straight into ballon, change to 500
             while (result == 0) & (datetime.now() < endT):
-                result = ctrl.connection_check()
+                result = ctrl.is_queued_msgs()
                 time.sleep(0.5)  # Don't overload CPU
 
             # These don't need to be parallel to the radio connection, since we won't
