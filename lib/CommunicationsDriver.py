@@ -48,4 +48,4 @@ class _CommSingleton:
         return self.__radio.getStabFlag()
 
     def getArmedFlag(self) -> bool:
-        self.__radio.getArmedFlag()
+        return self.__radio.getArmedFlag()
