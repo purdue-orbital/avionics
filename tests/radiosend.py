@@ -19,15 +19,15 @@ def run():
         mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
 
             # Data collection needs to be running parallel to rest of program
-        collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
+        collect = ctrl.IntervalThread(lambda: ctrl.read_data(self.proxy), 1)
         collect.start()
 
     while True:
         # Control loop to determine radio disconnection
-        result = ctrl.connection_check()
+        result = ctrl.is_queued_msgs()
         endT = datetime.now() + timedelta(seconds=10)  # Wait 5 min. to reestablish signal
         while ((result == None) & (datetime.now() < endT)):
-                result = ctrl.connection_check()
+                result = ctrl.is_queued_msgs()
                 sleep(0.5)  # Don't overload CPU
 
                 # These don't need to be parallel to the radio connection, since we won't

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import math
 import time
@@ -101,6 +103,11 @@ class Control:
 
     def get_next_msg(self) -> ComsMessage:
         return self.commands.pop(0)
+
+    def peek_next_msg(self) -> ComsMessage | None:
+        if self.is_queued_msgs():
+            return self.commands[0]
+        return None
 
     def getLaunchFlag(self) -> bool:
         return self.comm_driver.getLaunchFlag()

@@ -96,11 +96,12 @@ class ControlProcess(Process):
 
             # FIXME: This should recieve the first msg with ARMED==TRUE
             # otherwise we risk race conditions
-            while not ctrl.is_armed():
+            while not ctrl.is_queued_msgs() or not ctrl.peek_next_msg().ARMED:
                 print(ctrl.commands)  # TODO: Remove debug stmt
-                while ctrl.is_queued_msgs():
+                if ctrl.is_queued_msgs():
                     ctrl.get_next_msg()
-                sleep(1)
+                else:
+                    sleep(1)
             ctrl.set_end_time()
 
             print("ARMED")
