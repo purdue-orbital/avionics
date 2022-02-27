@@ -33,13 +33,13 @@ def run():
                 # These don't need to be parallel to the radio connection, since we won't
                 # be getting commands if the radio is down
         if result == 0:
-            ctrl.qdm_check(0)
+            ctrl.set_qdm(0)
         else:
                 # Receive commands and iterate through them
             if ctrl.getLaunchFlag():
                 ctrl.ignition(mode)
             if ctrl.getQDMFlag():
-                ctrl.qdm_check(0)
+                ctrl.set_qdm(0)
             if ctrl.getAbortFlag():
                 ctrl.abort()
             if ctrl.getStabFlag:

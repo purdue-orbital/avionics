@@ -32,7 +32,7 @@ POWER_ON_ALARM = 20  # minutes
 logging.basicConfig(
     level=logging.INFO,
     filename="../logs/status_control.log",
-    filemode="a+",
+    filemode="a+", #FIXME: Need 'a+'? Could just use 'a'? 
     format="%(asctime)s %(processName)s::%(threadName)s %(levelname)s > %(message)s",
 )
 logger = logging.getLogger("control")
@@ -89,19 +89,20 @@ class Control:
         }
 
     def set_end_time(self):
-        self.endT = datetime.now() + timedelta(minutes=POWER_ON_ALARM)  #
+        self.endT = datetime.now() + timedelta(minutes=POWER_ON_ALARM)
 
-    def groundAbort(self, abort=0):
-        if abort:
-            self.ground_abort = 1
+    def get_ground_abort(self) -> bool:
         return self.ground_abort
 
-    def safetyTimer(self):
-        if (datetime.now() > self.endT) and (not self.ground_abort):
-            print("safety_timer")
-            self.qdm_check(1)
+    def set_ground_abort(self, new_val: bool) -> None:
+        self.ground_abort = new_val
 
-    def get_next_msg(self) -> ComsMessage:
+    def safetyTimer(self):
+        if datetime.now() > self.endT and not self.ground_abort:
+            print("safety_timer")
+            self.set_qdm(True)
+
+    def pop_next_msg(self) -> ComsMessage:
         return self.commands.pop(0)
 
     def peek_next_msg(self) -> ComsMessage | None:
@@ -233,12 +234,12 @@ class Control:
         return void
         """
         logging.info("Ignition attempted")
-        data = self.generate_status_json()
+        data = self.generate_status_json() # FIXME: Variable written to but never used
 
         # launch = self.launch_condition()
         launch = True
         if launch:
-            data["Ignition"] = 1
+            data["Ignition"] = 1 # FIXME: Written but never used
             GPIO.add_event_detect(IGNITION_DETECTION_PIN, GPIO.RISING)
             if mode == 1:  # testing mode (avoid igniting motor)
                 GPIO.output(IGNITION_PIN, GPIO.HIGH)
@@ -249,7 +250,6 @@ class Control:
                     logging.info("Ignition (testing) detected")
                 else:
                     logging.warn("Ignition(testing) not detected")
-
             elif mode == 2:  # Ignite motor
                 print("Igniting Motor")
                 GPIO.output(ROCKET_LOG_PIN, GPIO.LOW)
@@ -263,8 +263,10 @@ class Control:
                     logging.info("Ignition detected")
                 else:
                     logging.warn("IGNITION not detected")
-
+            else:
+                raise ValueError(f"Unexpected Ignition Mode: {mode}")
         else:
+            # FIXME: Unreachable code block
             logging.error(
                 "Ignition failed: altitude and/or spinrate not within tolerance"
             )
@@ -274,8 +276,12 @@ class Control:
         print("Aborting")
         GPIO.cleanup()
 
-    def qdm_check(self, QDM: bool) -> None:
+    def set_qdm(self, QDM: bool) -> None:
         """
+        FIXME: docstring seems to  contain wrong information
+        This is clearly acting as a setter not a check
+        As such changed name from 'check_qdm' -> 'set_qdm'
+
         This checks if we need to QDM.
         Parameter: QDM
 
@@ -322,13 +328,13 @@ if __name__ == "__main__":
             # These don't need to be parallel to the radio connection, since we won't
             # be getting commands if the radio is down
             if result == 0:
-                ctrl.qdm_check(0)
+                ctrl.set_qdm(0)
             else:
                 # Receive commands and iterate through them
                 if ctrl.getLaunchFlag():
                     ctrl.ignition(mode)
                 if ctrl.getQDMFlag():
-                    ctrl.qdm_check(0)
+                    ctrl.set_qdm(0)
                 if ctrl.getAbortFlag():
                     ctrl.abort()
                 if ctrl.getStabFlag():

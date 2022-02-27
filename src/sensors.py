@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import time
-from threading import Event, Thread
+from typing import Any, Callable, Tuple
 
 from ak89 import AK8963
 from devutils import envvartobool
@@ -8,12 +10,23 @@ from ds32 import DS3231
 from mpu9 import MPU9250
 from neo7 import NEO7M
 
+from interval import IntervalThread
+
 if envvartobool("ORBIT_MOCK_GPIO"):
     import mockGPIO as GPIO
 else:
     import RPi.GPIO as GPIO
 
 ROCKET_IN = 27
+
+# Set up debug logging
+logging.basicConfig(
+    level=logging.INFO,
+    filename="../logs/status_sensors.log",
+    filemode="a+",  # FIXME: Need 'a+'? Could just use 'a'
+    format="%(asctime)s %(processName)s::%(threadName)s %(levelname)s > %(message)s",
+)
+logger = logging.getLogger("sensors")
 
 
 class Sensors:
@@ -30,6 +43,12 @@ class Sensors:
     class Function:
         """
         List node for functions to be called
+
+        FIXME: Class seems misnamed. This is really a node in a list
+        Not clear what the difference between 'accessing' and 'preforming'
+        Neither is a thing a function does
+        Why is does this class belong to Sensors?
+
         Arguments:
             perform : function call to execute generically
             access  : separate function call to read, if necessary
@@ -38,7 +57,14 @@ class Sensors:
             token: column header for logging purposes
         """
 
-        def __init__(self, perform, access, freq, identity, token):
+        def __init__(
+            self,
+            perform: Callable[[], Any],
+            access: Callable[[], Any] | None,
+            freq: float,
+            identity: str,
+            token: str | None,
+        ):
             self.perform = perform
             if access is None:
                 self.access = perform
@@ -48,52 +74,29 @@ class Sensors:
             self.freq = freq
             self.id = identity
             self.token = token
-            self.next = None
+            self.next: Sensors.Function | None = None
 
     class SLL:
         """
         Method to reference head node and prepend a node
+
+        FIXME: Why does the concept of a linked list belong to the sensors class?
+        Why use this over a tradiontal dynamic list??
         """
 
         def __init__(self):
-            self.head = None
+            self.head: Sensors.Function | None = None
 
-        def add(self, node):
+        def add(self, node: Sensors.Function):
             if node.id is not None:  # Initialize sensors
                 node.perform()
 
             node.next = self.head
             self.head = node
 
-    class IntThread(Thread):
-        """
-        Spawn a Thread to repeat at a given interval
-        Arguments:
-            obj : a Function object to be executed
-        """
-
-        def __init__(self, obj):
-            Thread.__init__(self, daemon=True)
-            # Could be used to prematurely stop thread using self.trigger.set()
-            self.trigger = Event()
-            self.obj = obj
-
-        def run(self):
-            while not self.trigger.wait(1 / self.obj.freq):
-                self.obj.perform()
-
     def __init__(self, name, imu_address=0x69, radio_port=True):
-        # Set up debug logging
-        self.console = logging.getLogger("sensors")
-        _format = "%(asctime)s %(threadName)s %(levelname)s > %(message)s"
-        logging.basicConfig(
-            level=logging.INFO,
-            filename="../logs/status_sensors.log",
-            filemode="a+",
-            format=_format,
-        )
 
-        self.console.info(f"\n\n### Starting {name} ###\n")
+        logger.info(f"\n\n### Starting {name} ###\n")
 
         # on init, setup the rocket input pin and its event handler
         GPIO.setmode(GPIO.BCM)
@@ -103,39 +106,55 @@ class Sensors:
         self.name = name
         self.json = {
             "origin": "balloon",
-            "GPS": {"long": 0, "lat": 0, "alt": 0},
-            "gyro": {"x": 0, "y": 0, "z": 0},
+            "GPS": {
+                "long": 0,
+                "lat": 0,
+                "alt": 0,
+            },
+            "gyro": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+            },
             "temp": 0,
-            "acc": {"x": 0, "y": 0, "z": 0},
+            "acc": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+            },
         }
 
         # Open log file and write header
+        # FIXME: Need 'a+'? Could just use 'a'
         self.log = open("../logs/data.log", "a+")
 
         # Initialize sensor Modules
         try:
             self.clock = DS3231("DS3231")
-        except:
-            self.console.warning("DS3231 not initialized")
+        except Exception:
+            logger.warning("DS3231 not initialized")
             self.clock = None
             self.start_time = time.time()
-            self.console.info("Using system clock")
+            logger.info("Using system clock")
+
         try:
             self.imu = MPU9250("MPU9250", mpu_address=imu_address)
-        except:
-            self.console.warning("MPU9250 not initialized")
+        except Exception:
+            logger.warning("MPU9250 not initialized")
+
         try:
             self.ak = AK8963("AK8963")
-        except:
-            self.console.warning("AK8963 not initialized")
+        except Exception:
+            logger.warning("AK8963 not initialized")
+
         try:
             self.neo = NEO7M()
-        except:
-            self.console.warning("NEO 7M GPS not initialized")
+        except Exception:
+            logger.warning("NEO 7M GPS not initialized")
 
         self.list = self.SLL()
 
-        self.console.info("Initialization complete")
+        logger.info("Initialization complete")
 
     def __enter__(self):
         return self
@@ -145,15 +164,17 @@ class Sensors:
         Specify cleanup procedure. Protects against most crashes
         """
         if exc_type is not None:
-            self.console.critical(f"{exc_type.__name__}: {exc_value}")
+            logger.critical(f"{exc_type.__name__}: {exc_value}")
         else:
-            self.console.info("Sensors.py completed successfully.")
+            logger.info("Sensors.py completed successfully.")
         GPIO.cleanup()
         self.log.close()
 
     def launch_detect(self, callback):
         """
         Callback function for the ROCKET_IN pin
+
+        FIXME: Unused callback
         """
         logging.info(f"Launch detected at mission time {self.time()[0]}")
         GPIO.remove_event_detect(ROCKET_IN)
@@ -182,9 +203,8 @@ class Sensors:
         while head is not None:
             if head.token is not None:  # Any data-writing function will have a token
                 data = head.access()
-                if (
-                    head.id is not None
-                ):  # If data is being sent over radio, will have an ID
+                # If data is being sent over radio, will have an ID
+                if head.id is not None:
                     sub = self.json[head.id]
                     if type(sub) is dict:
                         self.json[head.id] = {
@@ -222,12 +242,15 @@ class Sensors:
         # This is straight up cancerous, but the way dict management works between
         # processes requires the dictionary to be reassigned to notify the DictProxy
         # of changes to itself
-        temp = manager[0]
+
+        # FIXME: Why are we using a managed list when mp.Manger.dict exists???
+
+        temp = manager[0] # FIXME: temp writen to but not used
         # temp = {k: v for k, v in self.json.items() if k in args} # Prune keys
         # temp["time"] = self.time()[0]
         temp = self.json
         # Reassign here
-        manager[0] = temp
+        manager[0] = temp # FIXME: unneded temp
 
     # print(temp)
 
@@ -246,6 +269,7 @@ class Sensors:
         """
         Finds least frequently polled sensor
         """
+        # FIXME: Cache info on sensor add?
         head = self.list.head
         min = head.freq
 
@@ -261,6 +285,7 @@ class Sensors:
         """
         Finds most frequently polled sensor
         """
+        # FIXME: Cache info on sensor add?
         head = self.list.head
         max = head.freq
 
@@ -281,25 +306,25 @@ class Sensors:
 
         while head is not None:
             # print(f"Spawning thread {head.name.__name__} with frequency {head.freq} Hz...")
-            self.console.info(
-                f"Spawning thread {head.id} with frequency {head.freq} Hz..."
-            )
-            t = self.IntThread(head)
+            logger.info(f"Spawning thread {head.id} with frequency {head.freq} Hz...")
+            
+            # NOTE: This is going to make a lot of untracked threads
+            t = IntervalThread(head.perform, head.freq)
             t.start()
 
             head = head.next
 
-    def time(self):
+    def time(self) -> Tuple[float] | None:
         """
         Reads time from the DS3231 RTC
         """
         if self.clock is not None:
             return (self.clock.time,)
         else:
-            self.console.error("Clock Missing")
+            logger.error("Clock Missing")
             return (time.time() - self.start_time,)
 
-    def gps(self, write=False):
+    def gps(self, write=False) -> Tuple[float, float, float] | None:
         """
         Reads positional GPS data from the NEO7M chip
         """
@@ -307,12 +332,12 @@ class Sensors:
             try:
                 self._gps = self.neo.position
             except Exception as e:
-                self.console.error(e)
+                logger.error(e)
                 self._gps = (-999, -999, -999)
         else:
             return self._gps
 
-    def accel(self, write=False):
+    def accel(self, write=False) -> Tuple[float, float, float] | None:
         """
         Reads acceleration from the MPU9250 chip
         """
@@ -320,7 +345,7 @@ class Sensors:
             try:
                 self._accel = self.imu.accel
             except Exception as e:
-                self.console.error(e)
+                logger.error(e)
                 self._accel = (-999, -999, -999)
         else:
             return self._accel
@@ -333,12 +358,12 @@ class Sensors:
             try:
                 self._gyro = self.imu.gyro
             except Exception as e:
-                self.console.error(e)
+                logger.error(e)
                 self._gyro = (-999, -999, -999)
         else:
             return self._gyro
 
-    def magnet(self, write=False):
+    def magnet(self, write=False) -> Tuple[float, float, float] | None:
         """
         Read magnetometer data from the MPU9250 chip
         """
@@ -346,12 +371,12 @@ class Sensors:
             try:
                 self._magnet = self.ak.mag
             except Exception as e:
-                self.console.error(e)
+                logger.error(e)
                 self._magnet = (-999, -999, -999)
         else:
             return self._magnet
 
-    def temperature(self, write=False):
+    def temperature(self, write=False) -> Tuple[float] | None:
         """
         Reads temperature data from the MS5611 chip
         """
@@ -359,7 +384,7 @@ class Sensors:
             try:
                 self._temperature = (self.imu.temp,)
             except Exception as e:
-                self.console.error(e)
+                logger.error(e)
                 self._temperature = (-999,)
         else:
             return self._temperature

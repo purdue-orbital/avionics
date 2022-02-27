@@ -22,7 +22,7 @@ class DS3231(I2CDevice):
 
     def __init__(self, name):
         super(DS3231, self).__init__(DS32_ADDRESS, name)
-        self.time = 0
+        self.time = 0 #FIXME: self.time never used. Mean self._time?
 
         GPIO.setmode(GPIO.BCM)
         # Set GPIO pin to read clock interrupt
