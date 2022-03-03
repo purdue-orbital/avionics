@@ -1,19 +1,17 @@
-// #include <linux/i2c-dev.h>
-// #include <i2c/smbus.h>
 #include "i2c_device.hpp"
 
-I2CDevice::I2CDevice(int address_, std::string name_) {
+I2CDevice::I2CDevice(int address_, std::string name_){
   name = name_;
   address = address_;
   bus = open_smbus();
   //bus = smbus(1); // open i2c bus 1
 }
 
-// TODO: currently causing a linker error 
+// TODO: currently causing a linker error
 int I2CDevice::open_smbus(){
   int file;
   char* filename = "/dev/i2c-1";
-  if ((file = open(filename, O_RDWR)) < 0) {
+  if ((file = open(filename, O_RDWR)) < 0){
     /* ERROR HANDLING: you can check errno to see what went wrong */
     perror("Failed to open the i2c bus");
     exit(1);
@@ -22,13 +20,21 @@ int I2CDevice::open_smbus(){
   return file;
 }
 
-long int I2CDevice::read(int register_) {
-  // code to be executed
+__s32 I2CDevice::read(__u8 register_){
+  // initiate communication with peripheral sensor
+  if (ioctl(bus, I2C_SLAVE, address) < 0){
+    /* ERROR HANDLING; you can check errno to see what went wrong */
+    exit(1);
+  }
+
+  //read 1 byte from register
+  return i2c_smbus_read_word_data(address, register);
+
 }
 
-std::vector<long int> I2CDevice::read_block(int register_, int num) {
-  // code to be executed
-  std::vector<long int> data;
+std::vector<__s32> I2CDevice::read_block(__u8 register_, int num){
+  // data to read
+  std::vector<__s32> data;
 
   for (int i=0; i<num; i++)
     data.push_back(read(register_+i));
@@ -36,8 +42,8 @@ std::vector<long int> I2CDevice::read_block(int register_, int num) {
   return data;
 }
 
-long int I2CDevice::write(int register_, int data) {
-  // code to be executed
+__s32 I2CDevice::write(__u8 register_, __u8 data){
+  return i2c_smbus_write_byte_data(address, register_, data)
 }
 
 /*    PYTHON CODE THAT NEEDS TO BE CONVERTED TO C++ ABOVE:

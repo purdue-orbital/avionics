@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <fcntl.h>
+#include <linux/i2c-dev.h>
+#include <i2c/smbus.h>
 
 class I2CDevice {
 /*
@@ -11,14 +13,15 @@ class I2CDevice {
 public:
   // don't know type for constructor attributes
   I2CDevice(int address, std::string name);
+
 private:
   std::string name;
   int address;
   int bus; //open working i2c bus (using bus 1 in python implementation)
 
   int open_smbus();
-  long int read(int register_);
-  std::vector<long int> read_block(int register_, int num);
-  long int write(int register_, int data);
+  __s32 read(__u8 register_);
+  std::vector<__s32> read_block(__u8 register_, int num);
+  __s32 write(__u8 register_, __u8 data);
 
 };
