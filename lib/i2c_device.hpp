@@ -3,8 +3,12 @@
 #include <string>
 #include <vector>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+
+extern "C" {
 #include <linux/i2c-dev.h>
 #include <i2c/smbus.h>
+}
 
 class I2CDevice {
 /*
