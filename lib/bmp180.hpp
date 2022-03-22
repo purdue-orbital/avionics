@@ -3,26 +3,32 @@
 
 #include "i2c_device.hpp"
 
-class BMP180: public I2CDevice {
+constexpr std::string BMP180_NAME{"BMP180"};
+constexpr int BMP180_I2C{0x77};
+
+class BMP180 : public I2CDevice {
 
 private:
-  // currently unknown return type; change later
-  //
-  float temperature;
-  float pressure;
+  float* temperature{};
+  float* pressure{};
 
+  // currently unknown return type; change later
   void calibrateTemp();
   void calibratePressure();
-  void pollTemp(); // read from sensor -> calibrate -> update calibrated temp
-  void pollPressure();
 
 public:
+  // read from sensor -> calibrate -> update calibrated temp -> return it
 
-
+  BMP180() : I2CDevice(BMP180_NAME, BMP180_I2C)
+  {
+  }
 
   float readTemp();
   float readPressure();
   float readAltitude();
+
+  // Read from all functions specified. Return array
+  float read();
 };
 
 #endif

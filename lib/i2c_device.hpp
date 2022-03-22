@@ -14,12 +14,14 @@ class I2CDevice {
 /*
   parent class for all sensors
 */
-public:
-  // don't know type for constructor attributes
-  I2CDevice(int address, std::string name);
+protected:
   __s32 read(__u8 register_);
   std::vector<__s32> read_block(__u8 register_, int num);
   __s32 write(__u8 register_, __u8 data);
+public:
+  // don't know type for constructor attributes
+  I2CDevice(int i2c_address, std::string device_name)
+  : address(i2c_address), name(device_name)
 
 private:
   std::string name;
@@ -27,8 +29,4 @@ private:
   int bus; //open working i2c bus (using bus 1 in python implementation)
 
   int open_smbus();
- // __s32 read(__u8 register_);
- // std::vector<__s32> read_block(__u8 register_, int num);
- // __s32 write(__u8 register_, __u8 data);
-
 };

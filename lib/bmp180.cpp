@@ -1,10 +1,10 @@
 #include "bmp180.hpp"
 
-auto BMP180::calibrateTemp(){
+void BMP180::calibrateTemp(){
   return;
 }
 
-auto BMP180::calibratePressure(){
+void BMP180::calibratePressure(){
   return;
 }
 
@@ -20,5 +20,14 @@ float BMP180::readPressure(){
 
 float BMP180::readAltitude(){
   // get altitude and return
+
+  return ;
+}
+
+float BMP180::read(){
+  // get altitude and return
+  readPressure();
+  readTemperature();
+  readAltitude();
   return ;
 }
