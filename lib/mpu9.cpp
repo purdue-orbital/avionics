@@ -30,10 +30,11 @@ float MPU9::CalibrateAngularVelocity() {
   returns float acceleration
 */
 float MPU9::ReadAcceleration() {
-  CalibrateAcceleration();
-  std::cout << "Read MPU9250 acceleration" << std::endl;
+  float c_acceleration = CalibrateAcceleration();
+  m_acceleration = c_acceleration;
+  std::cout << "Read MPU9250 acceleration: " << m_acceleration << std::endl;
 
-  return 1.0;
+  return m_acceleration;
 }
 
 /*
@@ -42,9 +43,9 @@ float MPU9::ReadAcceleration() {
   returns float angular velocity
 */
 float MPU9::ReadAngularVelocity() {
-  // get orientation and return
-  CalibrateAngularVelocity();
-  std::cout << "Read MPU9250 angular velocity" << std::endl;
+  float c_angular_velocity = CalibrateAngularVelocity();
+  m_angular_velocity = c_angular_velocity;
+  std::cout << "Read MPU9250 angular velocity: " << m_angular_velocity << std::endl;
 
   return 1.0;
 }
@@ -54,19 +55,26 @@ float MPU9::ReadAngularVelocity() {
 
   returns float array of acceleration and angular velocity
 */
-float MPU9::read() {
+float MPU9::ReadSensor() {
   ReadAcceleration();
   ReadAngularVelocity();
   return 1.0;
 }
 
+MPU9::MPU9(std::string_view s_name, int s_i2c_address)
+: m_name{ s_name }, m_i2c_address{ s_i2c_address }
+{
+  std::cout << "MPU9 constructed with " << s_name << " and " << s_i2c_address << std::endl;
+}
+
+
 /*
   Test MPU9 constructor and read functions
 */
 int main() {
-  MPU9 test = MPU9(MPU9_NAME, MPU9_I2C);
+  MPU9 test{MPU9_NAME, MPU9_I2C};
 
-  float value = test.read();
+  float value = test.ReadSensor();
 
   return 0;
 }

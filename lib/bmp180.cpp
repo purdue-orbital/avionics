@@ -30,10 +30,11 @@ float BMP180::CalibratePressure() {
   returns float temperature
 */
 float BMP180::ReadTemp() {
-  CalibrateTemp();
-  std::cout << "Read BMP180 temperature" << std::endl << std::endl;
+  float c_temp_data = CalibrateTemp();
+  m_temperature = c_temp_data;
+  std::cout << "Read BMP180 temperature: " << m_temperature << std::endl;
 
-  return 1.0;
+  return m_temperature;
 }
 
 /*
@@ -42,10 +43,11 @@ float BMP180::ReadTemp() {
   returns float return
 */
 float BMP180::ReadPressure() {
-  CalibratePressure();
-  std::cout << "Read BMP180 pressure" << std::endl << std::endl;
+  float c_pressure_data = CalibratePressure();
+  m_pressure = c_pressure_data;
+  std::cout << "Read BMP180 pressure: " << m_pressure << std::endl;
 
-  return 1.0;
+  return m_pressure;
 }
 
 /*
@@ -54,7 +56,8 @@ float BMP180::ReadPressure() {
   returns float altitude
 */
 float BMP180::ReadAltitude() {
-  std::cout << "Read BMP180 altitude" << std::endl << std::endl;
+  m_altitude = m_pressure + m_temperature;
+  std::cout << "Read BMP180 altitude: " << m_altitude << std::endl;
 
   return 1.0;
 }
@@ -64,23 +67,26 @@ float BMP180::ReadAltitude() {
 
   returns float array of pressure, temperature, and altitude
 */
-float BMP180::read() {
+float BMP180::ReadSensor() {
   ReadPressure();
   ReadTemp();
   ReadAltitude();
   return 1.0;
 }
 
-//BMP180::BMP180(std::string_view s_name, int s_i2c_address) {
-//}
+BMP180::BMP180(std::string_view name, int i2c_address)
+: m_name(name), m_i2c_address(i2c_address)
+{
+  std::cout << "BMP180 constructed with " << m_name << " and " << m_i2c_address << std::endl;
+}
 
 /*
   Test BMP180 constructor and read functions
 */
 int main() {
-  BMP180 test = BMP180(BMP180_NAME, BMP180_I2C);
+  BMP180 test{BMP180_NAME, BMP180_I2C};
 
-  float value = test.read();
+  float value = test.ReadSensor();
 
   return 0;
 }

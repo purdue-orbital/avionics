@@ -22,11 +22,11 @@ class MPU9 {
 
 private:
   // Two fields below will be replaced with I2CDevice's versions
-  std::string_view name;
-  int i2c_address;
+  std::string_view m_name{};
+  int m_i2c_address{};
 
-  float acceleration;
-  float angular_velocity;
+  float m_acceleration{};
+  float m_angular_velocity{};
 
   // TODO: Container for acceleration and gyroscope components ie array? vector?
   float CalibrateAcceleration();
@@ -34,11 +34,7 @@ private:
 
 public:
   // Constructor parameters will be initialized with I2CDevice constructor
-  MPU9(std::string_view s_name, int s_i2c_address)
-  : name(s_name), i2c_address(s_i2c_address)
-  {
-    std::cout << "MPU9 constructed with " << s_name << " and " << s_i2c_address << std::endl;
-  }
+  MPU9(std::string_view s_name, int s_i2c_address);
 
   // read from sensor -> calibrate -> update calibrated temp -> return it
   float ReadAcceleration();
@@ -46,7 +42,7 @@ public:
 
   // TODO: Determine alternative return type for read()
   // Read from all functions specified. Return array
-  float read();
+  float ReadSensor();
 };
 
 
