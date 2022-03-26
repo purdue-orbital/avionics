@@ -2,7 +2,7 @@
 #define MPU_9250
 
 //#include "i2c_device.hpp"
-#include <iostream>
+#include "sensor.hpp"
 
 constexpr std::string_view MPU9_NAME{"MPU9"};
 constexpr int MPU9_I2C{0x69};
@@ -14,17 +14,13 @@ constexpr int MPU9_I2C{0x69};
 
   * - Inherited from I2CDevice
 
-  Inputs:
-    std::string_view name* -> name of the sensor
-    int i2c_address* -> I2C Address that sensor occupies on sensor bus
+  Parameters:
+    std::string_view s_name* -> name of the sensor
+    int s_i2c_address* -> I2C Address that sensor occupies on I2C bus
 */
-class MPU9 {
+class MPU9 : public Sensor {
 
 private:
-  // Two fields below will be replaced with I2CDevice's versions
-  std::string_view m_name{};
-  int m_i2c_address{};
-
   float m_acceleration{};
   float m_angular_velocity{};
 
@@ -42,7 +38,7 @@ public:
 
   // TODO: Determine alternative return type for read()
   // Read from all functions specified. Return array
-  float ReadSensor();
+  virtual float ReadSensor();
 };
 
 

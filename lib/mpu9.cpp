@@ -62,7 +62,7 @@ float MPU9::ReadSensor() {
 }
 
 MPU9::MPU9(std::string_view s_name, int s_i2c_address)
-: m_name{ s_name }, m_i2c_address{ s_i2c_address }
+: Sensor(s_name, s_i2c_address)
 {
   std::cout << "MPU9 constructed with " << s_name << " and " << s_i2c_address << std::endl;
 }

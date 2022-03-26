@@ -2,7 +2,7 @@
 #define BMP_180
 
 //#include "i2c_device.hpp"
-#include <iostream>
+#include "sensor.hpp"
 
 constexpr std::string_view BMP180_NAME{"BMP180"};
 constexpr int BMP180_I2C{0x77};
@@ -14,17 +14,13 @@ constexpr int BMP180_I2C{0x77};
 
   * - Inherited from I2CDevice
 
-  Inputs:
-    std::string_view name* -> name of the sensor
-    int i2c_address* -> I2C Address that sensor occupies on sensor bus
+  Parameters:
+    std::string_view s_name* -> name of the sensor
+    int s_i2c_address* -> I2C Address that sensor occupies on I2C bus
 */
-class BMP180 {
+class BMP180 : public Sensor {
 
 private:
-  // Two fields below will be replaced with I2CDevice's versions
-  std::string_view m_name{};
-  int m_i2c_address{};
-
   float m_temperature{};
   float m_pressure{};
   float m_altitude{};
@@ -34,7 +30,7 @@ private:
 
 public:
   // Constructor parameters will be initialized with I2CDevice constructor
-  BMP180(std::string_view name, int i2c_address);
+  BMP180(std::string_view s_name, int s_i2c_address);
 
   // read from sensor -> calibrate -> update calibrated temp -> return it
   float ReadTemp();

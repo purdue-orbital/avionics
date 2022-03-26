@@ -40,7 +40,7 @@ float BMP180::ReadTemp() {
 /*
   Update and return the pressure
 
-  returns float return
+  returns float pressure
 */
 float BMP180::ReadPressure() {
   float c_pressure_data = CalibratePressure();
@@ -74,8 +74,8 @@ float BMP180::ReadSensor() {
   return 1.0;
 }
 
-BMP180::BMP180(std::string_view name, int i2c_address)
-: m_name(name), m_i2c_address(i2c_address)
+BMP180::BMP180(std::string_view s_name, int s_i2c_address)
+: Sensor(s_name, s_i2c_address)
 {
   std::cout << "BMP180 constructed with " << m_name << " and " << m_i2c_address << std::endl;
 }
