@@ -30,7 +30,7 @@ private:
 
 public:
   // Constructor parameters will be initialized with I2CDevice constructor
-  MPU9(std::string_view s_name, int s_i2c_address);
+  MPU9(std::string_view s_name=MPU9_NAME, int s_i2c_address=MPU9_I2C);
 
   // read from sensor -> calibrate -> update calibrated temp -> return it
   float ReadAcceleration();

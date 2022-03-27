@@ -1,4 +1,6 @@
 #include "bmp180.hpp"
+#include <cmath>
+#include <climits>
 
 /*
   Read the sensor's temperature from the I2C bus and
@@ -6,22 +8,39 @@
 
   returns float of calibrated pressure data
 */
-float BMP180::CalibrateTemp() {
-  std::cout << "BMP180 temperature calibrated" << std::endl;
+void BMP180::CalibrateTemp() {
+  X1 = (temp - AC6) * AC5 / 32768.0;
+  X2 = (MC * 2048.0) / (X1 + MD);
+  B5 = X1 + X2;
 
-  return 1.0;
+  std::cout << "BMP180 temperature calibrated" << std::endl;
+  return B5;
 }
 
 /*
   Read the sensor's pressure from the I2C bus and
-  perform operations on data
+  perform operations on data to update pressure
 
-  returns float of calibrated pressure data
 */
-float BMP180::CalibratePressure() {
+void BMP180::CalibratePressure() {
+  B6 = B5 - 4000;
+  X1 = (B2 * (B6 * B6 / 4096.0)) / 2048.0;
+  X2 = AC2 * B6 / 2048.0;
+  X3 = X1 + X2;
+  B3 = (((AC1 * 4 + X3) * 2) + 2) / 4.0;
+  X1 = AC3 * B6 / 8192.0;
+  X2 = (B1 * (B6 * B6 / 2048.0)) / 65536.0;
+  X3 = ((X1 + X2) + 2) / 4.0;
+  B4 = AC4 * (X3 + 32768) / 32768.0;
+  B7 = ((pres - B3) * (25000.0));
+  if (B7 < LONG_MAX)
+    m_pressure = (B7 * 2) / B4;
+  else
+    m_pressure = (B7 / B4) * 2;
+  X1 = (m_pressure / 256.0) * (m_pressure / 256.0);
+  X1 = (X1 * 3038.0) / 65536.0;
+  X2 = ((-7357) * m_pressure) / 65536.0;
   std::cout << "BMP180 pressure calibrated" << std::endl;
-
-  return 1.0;
 }
 
 /*
@@ -31,7 +50,7 @@ float BMP180::CalibratePressure() {
 */
 float BMP180::ReadTemp() {
   float c_temp_data = CalibrateTemp();
-  m_temperature = c_temp_data;
+  m_temperature = ((c_temp_data + 8.0) / 16.0) / 10.0;
   std::cout << "Read BMP180 temperature: " << m_temperature << std::endl;
 
   return m_temperature;
@@ -40,11 +59,11 @@ float BMP180::ReadTemp() {
 /*
   Update and return the pressure
 
-  returns float pressure
+  returns float pressure in hPa
 */
 float BMP180::ReadPressure() {
   float c_pressure_data = CalibratePressure();
-  m_pressure = c_pressure_data;
+
   std::cout << "Read BMP180 pressure: " << m_pressure << std::endl;
 
   return m_pressure;
@@ -56,7 +75,8 @@ float BMP180::ReadPressure() {
   returns float altitude
 */
 float BMP180::ReadAltitude() {
-  m_altitude = m_pressure + m_temperature;
+  // TODO: Replace literals with physical variables
+  m_altitude = 44330 * (1 - pow((m_pressure / 1013.25), 0.1903));
   std::cout << "Read BMP180 altitude: " << m_altitude << std::endl;
 
   return 1.0;
@@ -84,7 +104,7 @@ BMP180::BMP180(std::string_view s_name, int s_i2c_address)
   Test BMP180 constructor and read functions
 */
 int main() {
-  BMP180 test{BMP180_NAME, BMP180_I2C};
+  BMP180 test{"test"};
 
   float value = test.ReadSensor();
 

@@ -72,7 +72,7 @@ MPU9::MPU9(std::string_view s_name, int s_i2c_address)
   Test MPU9 constructor and read functions
 */
 int main() {
-  MPU9 test{MPU9_NAME, MPU9_I2C};
+  MPU9 test{"test"};
 
   float value = test.ReadSensor();
 
