@@ -32,8 +32,8 @@ private:
   float m_pressure{};
   float m_altitude{};
 
-  float CalibrateTemp();
-  float CalibratePressure();
+  void CalibrateTemp();
+  void CalibratePressure();
 
 public:
   // Constructor parameters will be initialized with I2CDevice constructor
