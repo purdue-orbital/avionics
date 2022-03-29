@@ -1,14 +1,17 @@
-from multiprocessing import Process, Manager, Event
+import traceback
 from datetime import datetime, timedelta
-from sensors import Sensors
-from control import Control
+from multiprocessing import Event, Manager, Process
 from time import sleep
-import RPi.GPIO as GPIO
+
+from control import Control
+from sensors import Sensors
+from interval import IntervalThread
+
 
 class SensorProcess(Process):
     def __init__(self, lproxy):
         Process.__init__(self)
-        self.exit = Event()
+        self.exit = Event() # FIXME: Event never used
         self.proxy = lproxy
 
     def run(self):
@@ -22,45 +25,61 @@ class SensorProcess(Process):
         with Sensors("balloon") as sensors:
             # Lambda used to pass generic multi-arg functions to sensors.add
             # These will later be executed in unique threads
-            sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
-                token="temp (C)", access=lambda: sensors.temperature()
+            sensors.add(
+                lambda: sensors.temperature(write=True),
+                1,
+                identity="temp",
+                token="temp (C)",
+                access=lambda: sensors.temperature(),
             )
 
-            sensors.add(lambda: sensors.gps(write=True), 0.5, identity="GPS",
-                token="lat, long, alt (m)", access=lambda: sensors.gps()
+            sensors.add(
+                lambda: sensors.gps(write=True),
+                0.5,
+                identity="GPS",
+                token="lat, long, alt (m)",
+                access=lambda: sensors.gps(),
             )
 
-            sensors.add(lambda: sensors.accel(write=True), 100, identity="acc",
-                token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+            sensors.add(
+                lambda: sensors.accel(write=True),
+                2,
+                identity="acc",
+                token="ax (g),ay (g),az (g)",
+                access=lambda: sensors.accel(),
             )
 
-            sensors.add(lambda: sensors.gyro(write=True), 100, identity="gyro",
-                token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+            sensors.add(
+                lambda: sensors.gyro(write=True),
+                2,
+                identity="gyro",
+                token="gx (dps),gy (dps),gz (dps)",
+                access=lambda: sensors.gyro(),
             )
             sensors.add(lambda: sensors.pass_to(self.proxy, "GPS", "gyro"), 2)
 
-            sensors.add(lambda: sensors.send(), 1)
+            # sensors.add(lambda: sensors.send(), 1)
 
-            
             ### DON'T CHANGE ###
             sensors.add(lambda: sensors.time(), sensors.greatest, token="time (s)")
             sensors.write_header()
             sensors.add(lambda: sensors.write(), sensors.greatest)
             sensors.stitch()
             ### DON'T CHANGE ###
-            
-            while True:
+
+            while True: # FIXME: Use event here??
                 sleep(1)
-    
+
     def shutdown(self):
         print("Killing SensorProcess...")
         self.exit.set()
         print("SensorProcess killed.")
 
+
 class ControlProcess(Process):
     def __init__(self, lproxy):
         Process.__init__(self)
-        self.exit = Event()
+        self.exit = Event() # FIXME: Event never used
         self.proxy = lproxy
 
     def run(self):
@@ -70,39 +89,57 @@ class ControlProcess(Process):
         print("Running control.py ...\n")
 
         with Control("balloon") as ctrl:
-            mode = 2 # mode 1 = testmode / mode 2 = pre-launch mode
-
+            mode = 2  # mode 1 = testmode / mode 2 = pre-launch mode
             # Data collection needs to be running parallel to rest of program
-            collect = ctrl.Collection(lambda: ctrl.read_data(self.proxy), 1)
+            collect = IntervalThread(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
 
+            while not ctrl.is_queued_msgs() or not ctrl.peek_next_msg().ARMED:
+                print(ctrl.commands)  # TODO: Remove debug stmt
+                if ctrl.is_queued_msgs():
+                    ctrl.pop_next_msg()
+                else:
+                    sleep(1)
+            ctrl.set_end_time()
+
+            print("ARMED")
             while True:
                 # Control loop to determine radio disconnection
-                result = ctrl.connection_check()
-                endT = datetime.now() + timedelta(seconds=300)  # Wait 5 min. to reestablish signal
-                while ((result == 0) & (datetime.now() < endT)):
-                    result = ctrl.connection_check()
+                ctrl.safetyTimer()
+
+                # Wait 5 min. to reestablish signal
+                endT = datetime.now() + timedelta(hours=3)
+                while not ctrl.is_queued_msgs() and datetime.now() < endT:
+                    ctrl.safetyTimer()
                     sleep(0.5)  # Don't overload CPU
 
                 # These don't need to be parallel to the radio connection, since we won't
-                # be getting commands if the radio is down
-                if result == 0:
-                    ctrl.qdm_check(0)
+                # be getting commands if the radjjio is down
+                if not ctrl.is_queued_msgs() and not ctrl.get_ground_abort():
+                    ctrl.set_qdm(True)
                 else:
                     # Receive commands and iterate through them
-                    commands = ctrl.check_queue()
+                    ctrl.pop_next_msg()
+                    # FIXME: Queue messages are never used, could just unbind queue here
+                    # or use orbitalcoms.LaunchStation.getArmedFlag() to detect armed
+
                     if ctrl.getLaunchFlag():
+                        print("Launch Detected")
                         ctrl.ignition(mode)
                     if ctrl.getQDMFlag():
-                        ctrl.qdm_check(0)
+                        print("QDM Detected")
+                        ctrl.set_qdm(True)
                     if ctrl.getAbortFlag():
-                        ctrl.abort()
+                        print("Abort Detected")
+                        ctrl.set_ground_abort(True)
                     if ctrl.getStabFlag():
-                        ctrl.stabilize()
+                        print("Stabilize Detected")
+                        ctrl.stabilization()
                 sleep(1)
-#            ctrl.qdm_check(0)
-#            sleep(3)
-#            ctrl.ignition(2)
+
+    #            ctrl.qdm_check(0)
+    #            sleep(3)
+    #            ctrl.ignition(2)
 
     def shutdown(self):
         print("Killing ControlProcess...")
@@ -110,11 +147,12 @@ class ControlProcess(Process):
         print("ControlProcess killed.")
 
 
-if __name__ == "__main__":
+def main() -> None:
     try:
         # Create Manager() for dict (which is stored in a list)
         manager = Manager()
         # Dict stored in lproxy[0] for syncing reasons
+        # FIXME: Why are we using a managed list when mp.Manger.dict exists???
         lproxy = manager.list()
         lproxy.append({})
 
@@ -122,18 +160,21 @@ if __name__ == "__main__":
         data = SensorProcess(lproxy)
         comm = ControlProcess(lproxy)
         # Start processes
-        data.start()
         comm.start()
+        data.start()
         # Wait in main so that this can be escaped properly with ctrl+c
         data.join()
         comm.join()
-        
-        while True:
-            sleep(2)
-            
+    except Exception:
+        print("exception caught")
+        traceback.print_exc()
     finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
         data.shutdown()
         comm.shutdown()
         sleep(1)  # Wait until processes close
         print("Processes terminated.\n")
+
+
+if __name__ == "__main__":
+    main()

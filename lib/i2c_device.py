@@ -1,5 +1,6 @@
 import smbus
 
+
 class I2CDevice:
     """
     Parent class for all sensors
@@ -19,8 +20,8 @@ class I2CDevice:
         data = []
         for i in range(0, num):
             data.append(self.read(register + i))
-            
+
         return data
-    
+
     def write(self, register, data):
         self.bus.write_byte_data(self.address, register, data)

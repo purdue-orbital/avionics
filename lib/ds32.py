@@ -1,21 +1,28 @@
-from i2c_device import I2CDevice
-import RPi.GPIO as GPIO
 from time import sleep
+
+from devutils import envvartobool
+from i2c_device import I2CDevice
+
+if envvartobool("ORBIT_MOCK_GPIO"):
+    import mockGPIO as GPIO
+else:
+    import RPi.GPIO as GPIO
 
 ### ADDRESSES ###
 DS32_ADDRESS = 0x68
-CONTROL_REGISTER = 0x0e
+CONTROL_REGISTER = 0x0E
 TEMP_REGISTER = 0x11
 CLOCK_PIN = 17
+
 
 class DS3231(I2CDevice):
     """
     Interface to the DS3231 RTC.
     """
-    
+
     def __init__(self, name):
         super(DS3231, self).__init__(DS32_ADDRESS, name)
-        self.time = 0
+        self.time = 0 #FIXME: self.time never used. Mean self._time?
 
         GPIO.setmode(GPIO.BCM)
         # Set GPIO pin to read clock interrupt
@@ -23,20 +30,19 @@ class DS3231(I2CDevice):
 
         # Sets 1.024 kHz mode for square wave on SQW pin
         self.write(CONTROL_REGISTER, 0b01101000)
-        
+
         if (self.read(CONTROL_REGISTER) & 0b01101000) != 0b01101000:
             raise ValueError("DS3231 mode not set correctly!")
-        
+
         # Create read thread for INT pin (17)
         GPIO.add_event_detect(CLOCK_PIN, GPIO.RISING, callback=self.tick)
 
-        
     def tick(self, channel):
         self._time += 1
 
     @property
     def time(self):
-        return (self._time / 1024.0)
+        return self._time / 1024.0
 
     @time.setter
     def time(self, value):
@@ -44,6 +50,7 @@ class DS3231(I2CDevice):
 
     @property
     def temp(self):
+
         msb = self.read(TEMP_REGISTER)
         lsb = self.read(TEMP_REGISTER + 1)
         self.temp = msb + (lsb >> 6) * 0.25
@@ -54,18 +61,17 @@ class DS3231(I2CDevice):
         self._temp = value
 
     def __del__(self):
-        GPIO.cleanup(self.pin)
+        GPIO.cleanup(CLOCK_PIN)
 
-        
-if __name__ == "__main__":    
+
+if __name__ == "__main__":
     clock = DS3231("DS3231")
-    
+
     try:
         while True:
             print("{:.3f}".format(clock.time))
             print("{:.2f}".format(clock.temp))
             sleep(1)
-            
+
     except KeyboardInterrupt:
         print("Stop.\n")
-    

@@ -1,5 +1,6 @@
-import RPi.GPIO as GPIO
 from time import sleep
+
+import RPi.GPIO as GPIO
 
 from sensors import Sensors
 
@@ -25,20 +26,36 @@ if __name__ == "__main__":
     with Sensors("balloon") as sensors:
         # Lambda used to pass generic multi-arg functions to sensors.add
         # These will later be executed in unique threads
-        sensors.add(lambda: sensors.temperature(write=True), 1, identity="temp",
-            token="temp (C)", access=lambda: sensors.temperature()
+        sensors.add(
+            lambda: sensors.temperature(write=True),
+            1,
+            identity="temp",
+            token="temp (C)",
+            access=lambda: sensors.temperature(),
         )
 
-        sensors.add(lambda: sensors.accel(write=True), 1, identity="acc",
-            token="ax (g),ay (g),az (g)", access=lambda: sensors.accel()
+        sensors.add(
+            lambda: sensors.accel(write=True),
+            1,
+            identity="acc",
+            token="ax (g),ay (g),az (g)",
+            access=lambda: sensors.accel(),
         )
 
-        sensors.add(lambda: sensors.gyro(write=True), 1, identity="gyro",
-            token="gx (dps),gy (dps),gz (dps)", access=lambda: sensors.gyro()
+        sensors.add(
+            lambda: sensors.gyro(write=True),
+            1,
+            identity="gyro",
+            token="gx (dps),gy (dps),gz (dps)",
+            access=lambda: sensors.gyro(),
         )
 
-        sensors.add(lambda: sensors.gps(write=True), 1, identity='gps',
-            token="lat,long,alt (m)", access=lambda: sensors.gps()
+        sensors.add(
+            lambda: sensors.gps(write=True),
+            1,
+            identity="gps",
+            token="lat,long,alt (m)",
+            access=lambda: sensors.gps(),
         )
 
         sensors.add(lambda: sensors.print(), 1)
@@ -49,6 +66,6 @@ if __name__ == "__main__":
         sensors.add(lambda: sensors.write(), sensors.greatest)
         sensors.stitch()
         ### DON'T CHANGE ###
-        
+
         while True:
             sleep(1)
