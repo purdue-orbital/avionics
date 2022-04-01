@@ -1,6 +1,10 @@
 #include "bmp180.hpp"
-#include <cmath>
 #include <climits>
+
+
+void InitializeCalibration() {
+  
+}
 
 /*
   Read the sensor's temperature from the I2C bus and

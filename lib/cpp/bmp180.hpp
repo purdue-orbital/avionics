@@ -4,15 +4,26 @@
 //#include "i2c_device.hpp"
 #include "sensor.hpp"
 
-constexpr std::string_view BMP180_NAME{"BMP180"};
-constexpr int BMP180_I2C{0x77};
+struct Calibration {
+  short AC1{};
+  short AC2{};
+  short AC3{};
+  unsigned short AC4{};
+  unsigned short AC5{};
+  unsigned short AC6{};
+  short B1{};
+  short B2{};
+  short MB{};
+  short MC{};
+  short MD{};
 
-constexpr int MEASUREMENT_CONTROL{0xF4};
-constexpr int TEMPERATURE_MEASURE{0xEE};
-constexpr int PRESSURE_MEASURE{0x74};
-
-constexpr int READ_MEASUREMENT{0xF6}
-constexpr int READ_CALIBRATION{0xAA};
+  long X1{};
+  long X2{};
+  long B3{};
+  unsigned long B4{};
+  long B5{};
+  long B6{};
+}
 
 // TODO: Include inheritance from I2CDevice and modify constructors
 /*
@@ -28,12 +39,24 @@ constexpr int READ_CALIBRATION{0xAA};
 class BMP180 : public Sensor {
 
 private:
+  static constexpr std::string_view BMP180_NAME{"BMP180"};
+  static constexpr int BMP180_I2C{0x77};
+
+  static constexpr int MEASUREMENT_CONTROL{0xF4};
+  static constexpr int TEMPERATURE_MEASURE{0xEE};
+  static constexpr int PRESSURE_MEASURE{0x74};
+
+  static constexpr int READ_MEASUREMENT{0xF6}
+  static constexpr int READ_CALIBRATION{0xAA};
+
   float m_temperature{};
   float m_pressure{};
   float m_altitude{};
 
   void CalibrateTemp();
   void CalibratePressure();
+
+  void InitializeCalibration();
 
 public:
   // Constructor parameters will be initialized with I2CDevice constructor
