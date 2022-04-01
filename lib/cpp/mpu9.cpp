@@ -71,16 +71,16 @@ MPU9::MPU9(std::string_view s_name, int s_i2c_address)
 {
   std::cout << "MPU9 constructed with " << GetName() << " and " << GetAddress() << std::endl;
 
-  if (read(MPU9::WHO_AM_I) != MPU9::DEVICE_ID) {
+  if (read(WHO_AM_I) != DEVICE_ID) {
     perror("MPU9250: init failed to find device");
     exit(1);
   }
 
-  write(MPU9::PWR_MGMT_1, 0x01);
+  write(PWR_MGMT_1, 0x01);
   sleep(0.2);
-  write(MPU9::PWR_MGMT_1, 0x00);
-  write(MPU9::ACCEL_CONFIG, ACCEL_2G);
-  write(MPU9::GYRO_CONFIG, GYRO_250DPS);
+  write(PWR_MGMT_1, 0x00);
+  write(ACCEL_CONFIG, ACCEL_2G);
+  write(GYRO_CONFIG, GYRO_250DPS);
 
   write(MPU9::INT_PIN_CFG, 0x22);
   write(MPU9::INT_ENABLE, 0x01);
