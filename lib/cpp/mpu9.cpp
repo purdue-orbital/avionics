@@ -2,18 +2,6 @@
 #include <unistd.h>
 
 /*
-  Switch from MSB first to LSB first
-
-  returns LSB-first int
-*/
-int MPU9::ToLSBFirst(int msb, int lsb) {
-  int value = (msb << 8) | lsb;
-  if (value >> 15)
-    return (value - (1 << 16));
-  return value;
-}
-
-/*
   Read the sensor's angular velocity from the I2C bus and
   perform operations on data
 

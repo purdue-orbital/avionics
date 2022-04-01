@@ -15,7 +15,8 @@
     int i2c_address* -> I2C Address that sensor occupies on sensor bus
 */
 class Sensor : public I2CDevice {
-
+protected:
+    int ToLSBFirst(int msb, int lsb);
 public:
   Sensor(std::string_view name, int i2c_address);
 

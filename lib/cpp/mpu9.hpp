@@ -49,7 +49,6 @@ private:
   double m_angular_velocity{};
 
   // TODO: Container for acceleration and gyroscope components ie array? vector?
-  int ToLSBFirst(int msb, int lsb);
   double ReadXYZ(double _register, double lsb);
 
 public:
