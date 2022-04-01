@@ -1,15 +1,16 @@
 #include "mpu9.hpp"
+#include <unistd.h>
 
 /*
-  Read the sensor's acceleration from the I2C bus and
-  perform operations on data
+  Switch from MSB first to LSB first
 
-  returns float of calibrated acceleration data
+  returns LSB-first int
 */
-float MPU9::CalibrateAcceleration() {
-  std::cout << "Calibrate MPU9250 acceleration" << std::endl;
-
-  return 1.0;
+int MPU9::ToLSBFirst(int msb, int lsb) {
+  int value = (msb << 8) | lsb;
+  if (value >> 15)
+    return (value - (1 << 16));
+  return value;
 }
 
 /*
@@ -18,8 +19,14 @@ float MPU9::CalibrateAcceleration() {
 
   returns float of calibrated angular velocity data
 */
-float MPU9::CalibrateAngularVelocity() {
-  std::cout << "Calibrate MPU9250 angular velocity" << std::endl;
+double MPU9::ReadXYZ(double _register, double lsb) {
+  i2c_block_t data = read_block(_register, 6);
+
+  double x = ToLSBFirst(data[0], data[1]) * lsb;
+  double y = ToLSBFirst(data[2], data[3]) * lsb;
+  double z = ToLSBFirst(data[4], data[5]) * lsb;
+
+  printf("x: % 06.4f y: % 06.4f z: % 06.4f\n", x, y, z);
 
   return 1.0;
 }
@@ -30,9 +37,8 @@ float MPU9::CalibrateAngularVelocity() {
   returns float acceleration
 */
 float MPU9::ReadAcceleration() {
-  float c_acceleration = CalibrateAcceleration();
-  m_acceleration = c_acceleration;
-  std::cout << "Read MPU9250 acceleration: " << m_acceleration << std::endl;
+  m_acceleration = ReadXYZ(ACCEL_DATA, alsb);
+  //std::cout << "Read MPU9250 acceleration: " << m_acceleration << std::endl;
 
   return m_acceleration;
 }
@@ -43,9 +49,8 @@ float MPU9::ReadAcceleration() {
   returns float angular velocity
 */
 float MPU9::ReadAngularVelocity() {
-  float c_angular_velocity = CalibrateAngularVelocity();
-  m_angular_velocity = c_angular_velocity;
-  std::cout << "Read MPU9250 angular velocity: " << m_angular_velocity << std::endl;
+  m_angular_velocity = ReadXYZ(MPU9::GYRO_DATA, glsb);
+  //std::cout << "Read MPU9250 angular velocity: " << m_angular_velocity << std::endl;
 
   return 1.0;
 }
@@ -62,9 +67,24 @@ float MPU9::ReadSensor() {
 }
 
 MPU9::MPU9(std::string_view s_name, int s_i2c_address)
-: Sensor(s_name, s_i2c_address)
+: Sensor{s_name, s_i2c_address}
 {
-  std::cout << "MPU9 constructed with " << s_name << " and " << s_i2c_address << std::endl;
+  std::cout << "MPU9 constructed with " << GetName() << " and " << GetAddress() << std::endl;
+
+  if (read(MPU9::WHO_AM_I) != MPU9::DEVICE_ID) {
+    perror("MPU9250: init failed to find device");
+    exit(1);
+  }
+
+  write(MPU9::PWR_MGMT_1, 0x01);
+  sleep(0.2);
+  write(MPU9::PWR_MGMT_1, 0x00);
+  write(MPU9::ACCEL_CONFIG, ACCEL_2G);
+  write(MPU9::GYRO_CONFIG, GYRO_250DPS);
+
+  write(MPU9::INT_PIN_CFG, 0x22);
+  write(MPU9::INT_ENABLE, 0x01);
+  sleep(0.1);
 }
 
 
