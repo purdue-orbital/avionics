@@ -16,7 +16,13 @@
 */
 class Sensor : public I2CDevice {
 protected:
-    int ToLSBFirst(int msb, int lsb);
+    template <typename T>
+    T ToLSBFirst(T msb, T lsb, bool check=false) {
+      T value = (msb << 8) | lsb;
+      if (check && (value >> 15))
+        return (value - (1 << 16));
+      return value;
+    }
 public:
   Sensor(std::string_view name, int i2c_address);
 

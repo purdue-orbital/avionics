@@ -10,9 +10,9 @@
 double MPU9::ReadXYZ(double _register, double lsb) {
   i2c_block_t data = read_block(_register, 6);
 
-  double x = ToLSBFirst(data[0], data[1]) * lsb;
-  double y = ToLSBFirst(data[2], data[3]) * lsb;
-  double z = ToLSBFirst(data[4], data[5]) * lsb;
+  double x = ToLSBFirst(data[0], data[1], true) * lsb;
+  double y = ToLSBFirst(data[2], data[3], true) * lsb;
+  double z = ToLSBFirst(data[4], data[5], true) * lsb;
 
   printf("x: % 06.4f y: % 06.4f z: % 06.4f\n", x, y, z);
 
@@ -57,8 +57,6 @@ float MPU9::ReadSensor() {
 MPU9::MPU9(std::string_view s_name, int s_i2c_address)
 : Sensor{s_name, s_i2c_address}
 {
-  std::cout << "MPU9 constructed with " << GetName() << " and " << GetAddress() << std::endl;
-
   if (read(WHO_AM_I) != DEVICE_ID) {
     perror("MPU9250: init failed to find device");
     exit(1);
@@ -72,6 +70,8 @@ MPU9::MPU9(std::string_view s_name, int s_i2c_address)
 
   write(MPU9::INT_PIN_CFG, 0x22);
   write(MPU9::INT_ENABLE, 0x01);
+  std::cout << "MPU9 constructed with " << GetName() << " and " << GetAddress() << std::endl;
+
   sleep(0.1);
 }
 
