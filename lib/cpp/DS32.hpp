@@ -3,7 +3,7 @@
 
 #include "i2c_device.hpp"
 #include <wiringPi.h> // CPP EQUIVALENT TO RPi.GPIO
-#include <time.h>
+#include <unistd.h>
 
 static constexpr int DS32_ADDRESS{0x68};
 static constexpr int CONTROL_REGISTER{0x0e};
@@ -19,10 +19,10 @@ public:
   void SetTime(float value);
   float GetTemp();
   void SetTemp(float value);
-  
+
   ~DS3231();
 private:
-  int time{0};
+  int time{};
 }
 
 #endif
