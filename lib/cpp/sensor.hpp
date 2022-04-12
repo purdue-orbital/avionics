@@ -2,7 +2,6 @@
 #define SENSOR_ABSTRACT
 
 #include "i2c_device.hpp"
-#include <iostream>
 
 // TODO: Include inheritance from I2CDevice and modify constructors
 /*
