@@ -14,8 +14,9 @@ ARGS=''
 script_path=`readlink -f "$0"`
 script_dir=`dirname $script_path`
 
-export ORBIT_MOCK_GPIO=1
-export ORBIT_REQUIRE_ROOT=0
+if [[ -z $ORBIT_MOCK_GPIO ]]; then export ORBIT_MOCK_GPIO=1; fi
+if [[ -z $ORBIT_REQUIRE_ROOT ]]; then export ORBIT_REQUIRE_ROOT=0; fi
+
 
 export PYTHONPATH="$script_dir/lib:$PYTHONPATH"
 export PYTHONPATH="$script_dir/devtools:$PYTHONPATH"
@@ -24,7 +25,6 @@ SUDO=""
 if [ $ORBIT_REQUIRE_ROOT -ne 0 ]; then
 	SUDO="sudo"
 fi
-echo $SUDO
 
 
 # Move to run.sh working directory
