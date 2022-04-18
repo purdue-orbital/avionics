@@ -132,6 +132,7 @@ class ControlProcess(Process):
                     if ctrl.getAbortFlag():
                         print("Abort Detected")
                         ctrl.set_ground_abort(True)
+                        ctrl.abort()
                     if ctrl.getStabFlag():
                         print("Stabilize Detected")
                         ctrl.stabilization()

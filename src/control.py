@@ -274,6 +274,7 @@ class Control:
     def abort(self) -> None:
         logging.info("aborted")
         print("Aborting")
+        set_qdm(True)
         GPIO.cleanup()
 
     def set_qdm(self, QDM: bool) -> None:
