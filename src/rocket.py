@@ -33,6 +33,13 @@ if __name__ == "__main__":
             token="temp (C)",
             access=lambda: sensors.temperature(),
         )
+        sensors.add(
+            lambda: sensors.gps(write=True),
+            1,
+            identity="GPS",
+            token="lat,long,alt (m)",
+            access=lambda: sensors.gps(),
+        )
 
         sensors.add(
             lambda: sensors.accel(write=True),
@@ -50,13 +57,6 @@ if __name__ == "__main__":
             access=lambda: sensors.gyro(),
         )
 
-        sensors.add(
-            lambda: sensors.gps(write=True),
-            1,
-            identity="gps",
-            token="lat,long,alt (m)",
-            access=lambda: sensors.gps(),
-        )
 
         sensors.add(lambda: sensors.print(), 1)
 
