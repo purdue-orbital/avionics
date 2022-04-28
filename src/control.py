@@ -3,20 +3,20 @@ from __future__ import annotations
 import logging
 import math
 import time
-
+import traceback
 from collections import deque
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import Deque, Dict, List, Tuple
 
-from orbitalcoms import ComsMessage
-
+import RPi.GPIO as GPIO
 from CommunicationsDriver import Comm
 from devutils import envvartobool
+from orbitalcoms import ComsMessage
 
-if envvartobool("ORBIT_MOCK_GPIO"):
-    import mockGPIO as GPIO
-else:
-    import RPi.GPIO as GPIO
+# if envvartobool("ORBIT_MOCK_GPIO"):
+#    import mockGPIO as GPIO
+# else:
 
 
 QDM_PIN = 13
@@ -32,10 +32,16 @@ POWER_ON_ALARM = 20  # minutes
 logging.basicConfig(
     level=logging.INFO,
     filename="../logs/status_control.log",
-    filemode="a+", #FIXME: Need 'a+'? Could just use 'a'? 
+    filemode="a+",  # FIXME: Need 'a+'? Could just use 'a'?
     format="%(asctime)s %(processName)s::%(threadName)s %(levelname)s > %(message)s",
 )
 logger = logging.getLogger("control")
+
+
+class LaunchState(Enum):
+    WAITING = "WAITING FOR LAUNCH SIGNAL"
+    LAUNCHING = "!! LAUNCHING ROCKET !!"
+    COMPLETE = "LAUNCH COMPLETE (wait 5 min to approach)"
 
 
 class Control:
@@ -58,6 +64,9 @@ class Control:
 
         self.altitude = None
         # self.rocket = None
+        print("GPIO setup")
+
+        self.launch_state = LaunchState.WAITING
 
         time.sleep(2)
         try:
@@ -128,13 +137,14 @@ class Control:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, tb):
         """
         Specify cleanup procedure. Protects against most crashes
         """
         print("EXITED CONTROL")
         if exc_type is not None:
             logger.critical(f"{exc_type.__name__}: {exc_value}")
+            logger.critical("".join(traceback.format_tb(tb)))
         else:
             logger.info("Control.py completed successfully.")
         GPIO.cleanup()
@@ -171,6 +181,7 @@ class Control:
         if self.data:
             message = self.generate_status_json()
             message["DATA"] = self.data
+            message["DATA"]["LAUNCH STATE"] = self.launch_state.value
             self.comm_driver.send(message)
 
     def lowpass_gyro(self) -> float:
@@ -234,12 +245,12 @@ class Control:
         return void
         """
         logging.info("Ignition attempted")
-        data = self.generate_status_json() # FIXME: Variable written to but never used
+        data = self.generate_status_json()  # FIXME: Variable written to but never used
 
         # launch = self.launch_condition()
-        launch = True
-        if launch:
-            data["Ignition"] = 1 # FIXME: Written but never used
+        if self.launch_state == LaunchState.WAITING:
+            self.launch_state = LaunchState.LAUNCHING
+            data["Ignition"] = 1  # FIXME: Written but never used
             GPIO.add_event_detect(IGNITION_DETECTION_PIN, GPIO.RISING)
             if mode == 1:  # testing mode (avoid igniting motor)
                 GPIO.output(IGNITION_PIN, GPIO.HIGH)
@@ -265,8 +276,8 @@ class Control:
                     logging.warn("IGNITION not detected")
             else:
                 raise ValueError(f"Unexpected Ignition Mode: {mode}")
+            self.launch_state = LaunchState.COMPLETE
         else:
-            # FIXME: Unreachable code block
             logging.error(
                 "Ignition failed: altitude and/or spinrate not within tolerance"
             )
@@ -274,7 +285,7 @@ class Control:
     def abort(self) -> None:
         logging.info("aborted")
         print("Aborting")
-        set_qdm(True)
+        self.set_qdm(True)
         GPIO.cleanup()
 
     def set_qdm(self, QDM: bool) -> None:

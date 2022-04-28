@@ -1,17 +1,20 @@
-import traceback
+import setenv  # Sets PYTHONPATH / other envvars, must be imported first
+
 from datetime import datetime, timedelta
 from multiprocessing import Event, Manager, Process
 from time import sleep
+import traceback
+
+from interval import IntervalThread
 
 from control import Control
 from sensors import Sensors
-from interval import IntervalThread
 
 
 class SensorProcess(Process):
     def __init__(self, lproxy):
         Process.__init__(self)
-        self.exit = Event() # FIXME: Event never used
+        self.exit = Event()  # FIXME: Event never used
         self.proxy = lproxy
 
     def run(self):
@@ -67,7 +70,7 @@ class SensorProcess(Process):
             sensors.stitch()
             ### DON'T CHANGE ###
 
-            while True: # FIXME: Use event here??
+            while True:  # FIXME: Use event here??
                 sleep(1)
 
     def shutdown(self):
@@ -79,7 +82,7 @@ class SensorProcess(Process):
 class ControlProcess(Process):
     def __init__(self, lproxy):
         Process.__init__(self)
-        self.exit = Event() # FIXME: Event never used
+        self.exit = Event()  # FIXME: Event never used
         self.proxy = lproxy
 
     def run(self):
@@ -94,35 +97,40 @@ class ControlProcess(Process):
             collect = IntervalThread(lambda: ctrl.read_data(self.proxy), 1)
             collect.start()
 
+            # Wait untill a Msg with an ARMED flag is received
             while not ctrl.is_queued_msgs() or not ctrl.peek_next_msg().ARMED:
-                print(ctrl.commands)  # TODO: Remove debug stmt
                 if ctrl.is_queued_msgs():
                     ctrl.pop_next_msg()
                 else:
                     sleep(1)
-            ctrl.set_end_time()
+            ctrl.set_end_time()  # Set an amount of time before panicing
+            max_flight_time = datetime.now() + timedelta(
+                hours=48
+            )  # Max flight time before panicing
 
             print("ARMED")
+
             while True:
                 # Control loop to determine radio disconnection
                 ctrl.safetyTimer()
 
-                # Wait 5 min. to reestablish signal
-                endT = datetime.now() + timedelta(hours=3)
-                while not ctrl.is_queued_msgs() and datetime.now() < endT:
-                    ctrl.safetyTimer()
-                    sleep(0.5)  # Don't overload CPU
+                now = datetime.now()
+                if now > ctrl.endT or now > max_flight_time:
+                    # PANIC!!
+                    print("Flight Time Exceded, Safety QDM Engaged")
 
-                # These don't need to be parallel to the radio connection, since we won't
-                # be getting commands if the radjjio is down
-                if not ctrl.is_queued_msgs() and not ctrl.get_ground_abort():
-                    ctrl.set_qdm(True)
-                else:
+                    # Not sure what ground_abort is or why it is checked
+                    # Simply adding additional check for backward compatability
+                    if not ctrl.ground_abort:
+                        ctrl.set_ground_abort(True)
+                        ctrl.set_qdm(True)
+                elif ctrl.is_queued_msgs():
                     # Receive commands and iterate through them
                     ctrl.pop_next_msg()
                     # FIXME: Queue messages are never used, could just unbind queue here
                     # or use orbitalcoms.LaunchStation.getArmedFlag() to detect armed
 
+                    ctrl.set_end_time()  # Reset panic timer
                     if ctrl.getLaunchFlag():
                         print("Launch Detected")
                         ctrl.ignition(mode)
@@ -166,13 +174,13 @@ def main() -> None:
         # Wait in main so that this can be escaped properly with ctrl+c
         data.join()
         comm.join()
-    except Exception:
+    except:
         print("exception caught")
+        data.shutdown()
+        comm.shutdown()
         traceback.print_exc()
     finally:  # Catch interrupts (terminates with traceback)
         print("Ending processes...")
-        data.shutdown()
-        comm.shutdown()
         sleep(1)  # Wait until processes close
         print("Processes terminated.\n")
 

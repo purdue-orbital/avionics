@@ -14,8 +14,8 @@ ARGS=''
 script_path=`readlink -f "$0"`
 script_dir=`dirname $script_path`
 
-if [[ -z $ORBIT_MOCK_GPIO ]]; then export ORBIT_MOCK_GPIO=1; fi
-if [[ -z $ORBIT_REQUIRE_ROOT ]]; then export ORBIT_REQUIRE_ROOT=0; fi
+if [[ -z $ORBIT_MOCK_GPIO ]]; then export ORBIT_MOCK_GPIO=0; fi
+if [[ -z $ORBIT_REQUIRE_ROOT ]]; then export ORBIT_REQUIRE_ROOT=1; fi
 
 
 export PYTHONPATH="$script_dir/lib:$PYTHONPATH"
